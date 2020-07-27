@@ -1,8 +1,9 @@
 package com.raymund.uvcmonitor
 
-import android.R
+import android.content.DialogInterface
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
+import android.util.Log
 import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
@@ -80,18 +81,16 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         super.onDestroy()
     }
 
-    private val mOnClickListener: OnClickListener = object : OnClickListener() {
-        fun onClick(view: View?) {
-            if (mUVCCamera == null) {
-                // XXX calling CameraDialog.showDialog is necessary at only first time(only when app has no permission).
-                CameraDialog.showDialog(this@MainActivity)
-            } else {
-                synchronized(mSync) {
-                    mUVCCamera!!.destroy()
-                    mUVCCamera = null
-                    isPreview = false
-                    isActive = isPreview
-                }
+    private val mOnClickListener: View.OnClickListener = View.OnClickListener {
+        if (mUVCCamera == null) {
+            // XXX calling CameraDialog.showDialog is necessary at only first time(only when app has no permission).
+            CameraDialog.showDialog(this@MainActivity)
+        } else {
+            synchronized(mSync) {
+                mUVCCamera!!.destroy()
+                mUVCCamera = null
+                isPreview = false
+                isActive = isPreview
             }
         }
     }
@@ -165,7 +164,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                         if (mUVCCamera != null) {
                             mUVCCamera!!.close()
                             if (mPreviewSurface != null) {
-                                mPreviewSurface.release()
+                                mPreviewSurface!!.release()
                                 mPreviewSurface = null
                             }
                             isPreview = false
@@ -215,7 +214,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             mPreviewSurface = holder.surface
             synchronized(mSync) {
                 if (isActive && !isPreview && mUVCCamera != null) {
-                    mUVCCamera.setPreviewDisplay(mPreviewSurface)
+                    mUVCCamera!!.setPreviewDisplay(mPreviewSurface)
                     mUVCCamera!!.startPreview()
                     isPreview = true
                 }
@@ -238,6 +237,4 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         private const val DEBUG = true // TODO set false when production
         private const val TAG = "MainActivity"
     }
-}
-
 }

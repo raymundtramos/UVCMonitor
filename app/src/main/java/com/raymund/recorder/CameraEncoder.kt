@@ -7,33 +7,8 @@ import android.media.MediaMuxer
 import android.util.Log
 import java.io.IOException
 
-/*
- *  UVCCamera
- *  library and sample to access to UVC web camera on non-rooted Android device
- *
- * Copyright (c) 2014-2017 saki t_saki@serenegiant.com
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *   You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *   Unless required by applicable law or agreed to in writing, software
- *   distributed under the License is distributed on an "AS IS" BASIS,
- *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *   See the License for the specific language governing permissions and
- *   limitations under the License.
- *
- *  All files in the folder are under this Apache License, Version 2.0.
- *  Files in the libjpeg-turbo, libusb, libuvc, rapidjson folder
- *  may have a different license, see the respective files.
- */
-
-
-
 abstract class Encoder : Runnable {
-    protected val mSync = Any()
+    private val mSync = Any()
 
     //********************************************************************************
     /**
@@ -98,7 +73,6 @@ abstract class Encoder : Runnable {
     }
 
     fun startRecording() {
-        if (DEBUG) Log.v(TAG, "startRecording")
         synchronized(mSync) {
             isCapturing = true
             mRequestStop = false
@@ -110,7 +84,6 @@ abstract class Encoder : Runnable {
      * the method to request stop encoding
      */
     fun stopRecording() {
-        if (DEBUG) Log.v(TAG, "stopRecording")
         mRequestStop = true
         synchronized(mSync) {
             if (!isCapturing) {
@@ -150,20 +123,17 @@ abstract class Encoder : Runnable {
      * encoding loop on private thread
      */
     override fun run() {
-        if (DEBUG) Log.d(
-            TAG,
-            "Encoder thread starting"
-        )
-        //		android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
         synchronized(mSync) {
             mRequestStop = false
             mRequestDrain = 0
             mSync.notify()
         }
+
         val isRunning = true
         var localRequestStop: Boolean
         var localRequestDrain: Boolean
-        while (isRunning) {
+
+        WHILE@ while (isRunning) {
             synchronized(mSync) {
                 localRequestStop = mRequestStop
                 localRequestDrain = mRequestDrain > 0
@@ -173,7 +143,7 @@ abstract class Encoder : Runnable {
                 drain()
                 // request stop recording
                 signalEndOfInputStream()
-                // process output data again for EOS signale
+                // process output data again for EOS signal
                 drain()
                 // release all related objects
                 release()
@@ -186,15 +156,12 @@ abstract class Encoder : Runnable {
                     try {
                         mSync.wait()
                     } catch (e: InterruptedException) {
-                        break
+                        break@WHILE
                     }
                 }
             }
         } // end of while
-        if (DEBUG) Log.d(
-            TAG,
-            "Encoder thread exiting"
-        )
+
         synchronized(mSync) {
             mRequestStop = true
             isCapturing = false
@@ -205,13 +172,14 @@ abstract class Encoder : Runnable {
      * Release all releated objects
      */
     protected fun release() {
-        if (DEBUG) Log.d(TAG, "release:")
         try {
             mEncodeListener!!.onRelease(this)
         } catch (e: Exception) {
             Log.e(TAG, "failed onStopped", e)
         }
+
         isCapturing = false
+
         if (mMediaCodec != null) {
             try {
                 mMediaCodec!!.stop()
@@ -221,6 +189,7 @@ abstract class Encoder : Runnable {
                 Log.e(TAG, "failed releasing MediaCodec", e)
             }
         }
+
         if (mMuxerStarted) {
             if (mMuxer != null) {
                 try {
@@ -230,17 +199,13 @@ abstract class Encoder : Runnable {
                 }
             }
         }
+
         mBufferInfo = null
     }
 
     protected fun signalEndOfInputStream() {
-        if (DEBUG) Log.d(
-            TAG,
-            "sending EOS to encoder"
-        )
-        // signalEndOfInputStream is only avairable for video encoding with surface
+        // signalEndOfInputStream is only available for video encoding with surface
         // and equivalent sending a empty buffer with BUFFER_FLAG_END_OF_STREAM flag.
-//		mMediaCodec.signalEndOfInputStream();	// API >= 18
         encode(null, 0, pTSUs)
     }
 
@@ -271,14 +236,10 @@ abstract class Encoder : Runnable {
                     inputBuffer.put(buffer, ix, sz)
                 }
                 ix += sz
-                //	            if (DEBUG) Log.v(TAG, "encode:queueInputBuffer");
+
                 if (length <= 0) {
                     // send EOS
                     mIsEOS = true
-                    if (DEBUG) Log.i(
-                        TAG,
-                        "send BUFFER_FLAG_END_OF_STREAM"
-                    )
                     mMediaCodec!!.queueInputBuffer(
                         inputBufferIndex, 0, 0,
                         presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM
@@ -290,11 +251,11 @@ abstract class Encoder : Runnable {
                         presentationTimeUs, 0
                     )
                 }
-            } else if (inputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                // wait for MediaCodec encoder is ready to encode
-                // nothing to do here because MediaCodec#dequeueInputBuffer(TIMEOUT_USEC)
-                // will wait for maximum TIMEOUT_USEC(10msec) on each call
             }
+            // inputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER
+            // wait for MediaCodec encoder is ready to encode
+            // nothing to do here because MediaCodec#dequeueInputBuffer(TIMEOUT_USEC)
+            // will wait for maximum TIMEOUT_USEC(10msec) on each call
         }
     }
 
@@ -303,15 +264,11 @@ abstract class Encoder : Runnable {
      */
     protected fun drain() {
         if (mMediaCodec == null) return
-        var encoderOutputBuffers =
-            mMediaCodec!!.outputBuffers
+
+        var encoderOutputBuffers = mMediaCodec!!.outputBuffers
         var encoderStatus: Int
         var count = 0
-        if (mMuxer == null) {
-//        	throw new NullPointerException("muxer is unexpectedly null");
-            Log.w(TAG, "muxer is unexpectedly null")
-            return
-        }
+
         LOOP@ while (isCapturing) {
             // get encoded data with maximum timeout duration of TIMEOUT_USEC(=10[msec])
             encoderStatus = mMediaCodec!!.dequeueOutputBuffer(
@@ -324,17 +281,9 @@ abstract class Encoder : Runnable {
                     if (++count > 5) break@LOOP  // out of while
                 }
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
-                if (DEBUG) Log.v(
-                    TAG,
-                    "INFO_OUTPUT_BUFFERS_CHANGED"
-                )
-                // this shoud not come when encoding
+                // this should not come when encoding
                 encoderOutputBuffers = mMediaCodec!!.outputBuffers
             } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                if (DEBUG) Log.v(
-                    TAG,
-                    "INFO_OUTPUT_FORMAT_CHANGED"
-                )
                 // this status indicate the output format of codec is changed
                 // this should come only once before actual encoded data
                 // but this status never come on Android4.3 or less
@@ -350,23 +299,15 @@ abstract class Encoder : Runnable {
                 mMuxer!!.start()
             } else if (encoderStatus < 0) {
                 // unexpected status
-                if (DEBUG) Log.w(
-                    TAG,
-                    "drain:unexpected result from encoder#dequeueOutputBuffer: $encoderStatus"
-                )
             } else {
                 val encodedData = encoderOutputBuffers[encoderStatus]
                     ?: // this never should come...may be a MediaCodec internal error
                     throw RuntimeException("encoderOutputBuffer $encoderStatus was null")
                 if (mBufferInfo!!.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG != 0) {
-                    // You shoud set output format to muxer here when you target Android4.3 or less
+                    // You should set output format to muxer here when you target Android 4.3 or less
                     // but MediaCodec#getOutputFormat can not call here(because INFO_OUTPUT_FORMAT_CHANGED don't come yet)
                     // therefor we should expand and prepare output format from buffer data.
-                    // This sample is for API>=18(>=Android 4.3), just ignore this flag here
-                    if (DEBUG) Log.d(
-                        TAG,
-                        "drain:BUFFER_FLAG_CODEC_CONFIG"
-                    )
+                    // This sample is for API >= 18(>= Android 4.3), just ignore this flag here
                     mBufferInfo!!.size = 0
                 }
                 if (mBufferInfo!!.size != 0) {
@@ -413,9 +354,8 @@ abstract class Encoder : Runnable {
         }
 
     companion object {
-        private const val DEBUG = true // TODO set false on release
         private const val TAG = "Encoder"
-        protected const val TIMEOUT_USEC = 10000 // 10[msec]
+        protected const val TIMEOUT_USEC = 10000 // 10 milliseconds
 
         /**
          * select primary codec for encoding from the available list which MIME is specific type
@@ -445,17 +385,5 @@ abstract class Encoder : Runnable {
             return result
         }
     }
-
     //********************************************************************************
-    init {
-        // create and start encoder thread
-        synchronized(mSync) {
-            Thread(this, javaClass.simpleName).start()
-            try {
-                // wait for starting thread
-                mSync.wait()
-            } catch (e: InterruptedException) {
-            }
-        }
-    }
 }

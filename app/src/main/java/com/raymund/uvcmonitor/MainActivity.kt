@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.*
 import android.widget.ImageButton
 import android.widget.Toast
+import com.raymund.recorder.CameraRecorder
 import com.raymund.widget.CameraTextureView
 import com.serenegiant.common.BaseActivity
 import com.serenegiant.usb.CameraDialog
@@ -18,16 +19,25 @@ import com.serenegiant.usb.UVCCamera
 class MainActivity : BaseActivity(), CameraDialogParent {
     private var mUSBMonitor: USBMonitor? = null
     private var mUVCCamera: UVCCamera? = null
+    private var mRecorder: CameraRecorder? = null
 
     private var mCameraView: CameraTextureView? = null
     private var mCameraButton: ImageButton? = null
+    private var mRecordButton: ImageButton? = null
     private var mPreviewSurface: Surface? = null
+
+    private val STATE_DISCONNECTED = 0
+    private val STATE_CONNECTED = 1
+    private val STATE_RECORDING = 2
+    private var mState: Int? = STATE_DISCONNECTED
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mCameraButton = findViewById<View>(R.id.camera_button) as ImageButton
-        mCameraButton!!.setOnClickListener(mOnClickListener)
+        mCameraButton!!.setOnClickListener(mDeviceOnClickListener)
+        mRecordButton = findViewById(R.id.record_button) as ImageButton
+        mRecordButton!!.setOnClickListener(mRecordOnClickListener)
         mCameraView = findViewById<View>(R.id.camera_texture_view) as CameraTextureView
         mCameraView!!.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (UVCCamera.DEFAULT_PREVIEW_HEIGHT).toDouble())
         mCameraView!!.surfaceTextureListener = mSurfaceTextureListener
@@ -53,6 +63,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private fun destroyViewAndMonitor() {
         mCameraView = null
         mCameraButton = null
+        mRecordButton = null
         if (mUSBMonitor != null) {
             mUSBMonitor!!.destroy()
             mUSBMonitor = null
@@ -68,15 +79,25 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             mPreviewSurface!!.release()
             mPreviewSurface = null
         }
+        mState = STATE_DISCONNECTED
     }
 
-    private val mOnClickListener: View.OnClickListener = View.OnClickListener {
+    private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {
         if (mUVCCamera == null) {
             CameraDialog.showDialog(this@MainActivity)
         } else {
             destroyUVCCamera()
         }
     }
+
+    private val mRecordOnClickListener: View.OnClickListener = View.OnClickListener {
+        if (mState == STATE_CONNECTED) {
+            mRecorder!!.startRecord();
+        } else if (mState == STATE_RECORDING) {
+            mRecorder!!.endRecord();
+        }
+    }
+
     private val mOnDeviceConnectListener: OnDeviceConnectListener =
         object : OnDeviceConnectListener {
             private fun initCamera(camera: UVCCamera, mode: Int) {
@@ -120,6 +141,12 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                     camera.setPreviewDisplay(mPreviewSurface)
                     camera.startPreview()
                     mUVCCamera = camera
+                    mRecorder = CameraRecorder(
+                        mPreviewSurface!!,
+                        UVCCamera.DEFAULT_PREVIEW_WIDTH,
+                        UVCCamera.DEFAULT_PREVIEW_HEIGHT,
+                    30)
+                    mState = STATE_CONNECTED
                 }, 0)
             }
 

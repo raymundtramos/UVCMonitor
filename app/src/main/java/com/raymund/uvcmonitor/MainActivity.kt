@@ -1,10 +1,8 @@
 package com.raymund.uvcmonitor
 
-import android.content.DialogInterface
 import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.ImageButton
 import android.widget.Toast
@@ -18,85 +16,79 @@ import com.serenegiant.usb.USBMonitor.UsbControlBlock
 import com.serenegiant.usb.UVCCamera
 
 class MainActivity : BaseActivity(), CameraDialogParent {
-    private val mSync = Any()
-
-    // for accessing USB and USB camera
     private var mUSBMonitor: USBMonitor? = null
     private var mUVCCamera: UVCCamera? = null
-    private var mUVCCameraView: CameraTextureView? = null
 
-    // for open&start / stop&close camera preview
+    private var mCameraView: CameraTextureView? = null
     private var mCameraButton: ImageButton? = null
     private var mPreviewSurface: Surface? = null
-    private var isActive = false
-    private var isPreview = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mCameraButton = findViewById<View>(R.id.camera_button) as ImageButton
         mCameraButton!!.setOnClickListener(mOnClickListener)
-        mUVCCameraView = findViewById<View>(R.id.camera_texture_view) as CameraTextureView
-        mUVCCameraView!!.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (UVCCamera.DEFAULT_PREVIEW_HEIGHT).toDouble())
-        mUVCCameraView!!.surfaceTextureListener = mSurfaceTextureListener
+        mCameraView = findViewById<View>(R.id.camera_texture_view) as CameraTextureView
+        mCameraView!!.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (UVCCamera.DEFAULT_PREVIEW_HEIGHT).toDouble())
+        mCameraView!!.surfaceTextureListener = mSurfaceTextureListener
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
     }
 
     override fun onStart() {
         super.onStart()
-        synchronized(mSync) {
-            if (mUSBMonitor != null) {
-                mUSBMonitor!!.register()
-            }
-        }
+        mUSBMonitor!!.register()
     }
 
     override fun onStop() {
-        synchronized(mSync) {
-            if (mUSBMonitor != null) {
-                mUSBMonitor!!.unregister()
-            }
-        }
+        mUSBMonitor!!.unregister()
         super.onStop()
     }
 
     override fun onDestroy() {
-        synchronized(mSync) {
-            isPreview = false
-            isActive = false
-            if (mUVCCamera != null) {
-                mUVCCamera!!.destroy()
-                mUVCCamera = null
-            }
-            if (mUSBMonitor != null) {
-                mUSBMonitor!!.destroy()
-                mUSBMonitor = null
-            }
-        }
-        mUVCCameraView = null
-        mCameraButton = null
+        destroyUVCCamera()
+        destroyViewAndMonitor()
         super.onDestroy()
+    }
+
+    private fun destroyViewAndMonitor() {
+        mCameraView = null
+        mCameraButton = null
+        if (mUSBMonitor != null) {
+            mUSBMonitor!!.destroy()
+            mUSBMonitor = null
+        }
+    }
+
+    private fun destroyUVCCamera() {
+        if (mUVCCamera != null) {
+            mUVCCamera!!.destroy()
+            mUVCCamera = null
+        }
+        if (mPreviewSurface != null) {
+            mPreviewSurface!!.release()
+            mPreviewSurface = null
+        }
     }
 
     private val mOnClickListener: View.OnClickListener = View.OnClickListener {
         if (mUVCCamera == null) {
-            // XXX calling CameraDialog.showDialog is necessary at only first time(only when app has no permission).
             CameraDialog.showDialog(this@MainActivity)
         } else {
-            synchronized(mSync) {
-                mUVCCamera!!.destroy()
-                mUVCCamera = null
-                mPreviewSurface!!.release()
-                mPreviewSurface = null
-                isPreview = false
-                isActive = false
-            }
+            destroyUVCCamera()
         }
     }
     private val mOnDeviceConnectListener: OnDeviceConnectListener =
         object : OnDeviceConnectListener {
+            private fun initCamera(camera: UVCCamera, mode: Int) {
+                camera.setPreviewSize(
+                    UVCCamera.DEFAULT_PREVIEW_WIDTH,
+                    UVCCamera.DEFAULT_PREVIEW_HEIGHT,
+                    mode
+                )
+            }
+
             override fun onAttach(device: UsbDevice) {
-                Toast.makeText(this@MainActivity, "USB_DEVICE_ATTACHED", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "USB device detected", Toast.LENGTH_SHORT).show()
             }
 
             override fun onConnect(
@@ -104,46 +96,30 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 ctrlBlock: UsbControlBlock,
                 createNew: Boolean
             ) {
-                synchronized(mSync) {
-                    if (mUVCCamera != null) {
-                        mUVCCamera!!.destroy()
-                    }
-                    isPreview = false
-                    isActive = isPreview
-                }
+                // Clear out the UVC Camera
+                destroyUVCCamera()
+
+                // Initialize the UVC Camera
                 queueEvent(Runnable {
-                    synchronized(mSync) {
-                        val camera = UVCCamera()
-                        camera.open(ctrlBlock)
+                    val camera = UVCCamera()
+                    camera.open(ctrlBlock)
+                    try {
+                        // Attempt to use MJPEG mode
+                        initCamera(camera, UVCCamera.FRAME_FORMAT_MJPEG)
+                    } catch (e: IllegalArgumentException) {
                         try {
-                            camera.setPreviewSize(
-                                UVCCamera.DEFAULT_PREVIEW_WIDTH,
-                                UVCCamera.DEFAULT_PREVIEW_HEIGHT,
-                                UVCCamera.FRAME_FORMAT_MJPEG
-                            )
-                        } catch (e: IllegalArgumentException) {
-                            try {
-                                // fallback to YUV mode
-                                camera.setPreviewSize(
-                                    UVCCamera.DEFAULT_PREVIEW_WIDTH,
-                                    UVCCamera.DEFAULT_PREVIEW_HEIGHT,
-                                    UVCCamera.DEFAULT_PREVIEW_MODE
-                                )
-                            } catch (e1: IllegalArgumentException) {
-                                camera.destroy()
-                                return@Runnable
-                            }
+                            // Fallback to YUV mode
+                            initCamera(camera, UVCCamera.DEFAULT_PREVIEW_MODE)
+                        } catch (e1: IllegalArgumentException) {
+                            camera.destroy()
+                            return@Runnable
                         }
-                        val surfaceTexture: SurfaceTexture = mUVCCameraView!!.surfaceTexture
-                        if (surfaceTexture != null) {
-                            mPreviewSurface = Surface(surfaceTexture)
-                            camera.setPreviewDisplay(mPreviewSurface)
-                            camera.startPreview()
-                            isActive = true
-                            isPreview = true
-                        }
-                        synchronized(mSync) { mUVCCamera = camera }
                     }
+                    val surfaceTexture: SurfaceTexture = mCameraView!!.surfaceTexture
+                    mPreviewSurface = Surface(surfaceTexture)
+                    camera.setPreviewDisplay(mPreviewSurface)
+                    camera.startPreview()
+                    mUVCCamera = camera
                 }, 0)
             }
 
@@ -151,33 +127,25 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 device: UsbDevice,
                 ctrlBlock: UsbControlBlock
             ) {
-                // XXX you should check whether the incoming device equal to camera device that currently using
                 queueEvent({
-                    synchronized(mSync) {
-                        if (mUVCCamera != null) {
-                            mUVCCamera!!.close()
-                            if (mPreviewSurface != null) {
-                                mPreviewSurface!!.release()
-                                mPreviewSurface = null
-                            }
-                            isPreview = false
-                            isActive = isPreview
-                        }
-                    }
+                    destroyUVCCamera()
                 }, 0)
             }
 
             override fun onDettach(device: UsbDevice) {
-                Toast.makeText(this@MainActivity, "USB_DEVICE_DETACHED", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "USB device detached", Toast.LENGTH_SHORT).show()
             }
 
-            override fun onCancel(device: UsbDevice) {}
+            override fun onCancel(device: UsbDevice) {
+            }
         }
 
+    // Override of CameraDialogParent.getUSBMonitor
     override fun getUSBMonitor(): USBMonitor {
         return mUSBMonitor!!
     }
 
+    // Override of CameraDialogParent.onDialogResult
     override fun onDialogResult(canceled: Boolean) {
         if (canceled) {
             runOnUiThread({

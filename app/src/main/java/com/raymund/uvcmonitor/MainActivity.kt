@@ -142,7 +142,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                     camera.startPreview()
                     mUVCCamera = camera
                     mRecorder = CameraRecorder(
-                        mPreviewSurface!!,
                         UVCCamera.DEFAULT_PREVIEW_WIDTH,
                         UVCCamera.DEFAULT_PREVIEW_HEIGHT,
                     30)

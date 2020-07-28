@@ -6,16 +6,21 @@ import android.media.MediaCodecList
 import android.media.MediaMuxer
 import android.util.Log
 import java.io.IOException
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
-abstract class Encoder : Runnable {
-    private val mSync = Any()
+abstract class CameraEncoder : Runnable {
+    private val mLock = ReentrantLock()
+    private val mCondition = mLock.newCondition()
+    protected val TAG = "CameraEncoder"
+    protected val TIMEOUT_USEC = 10000 // 10 milliseconds
 
     //********************************************************************************
     /**
      * Flag that indicate this encoder is capturing now.
      */
     @Volatile
-    var isCapturing = false
+    protected var mIsCapturing = false
         protected set
 
     /**
@@ -63,20 +68,20 @@ abstract class Encoder : Runnable {
          * callback after finishing initialization of encoder
          * @param encoder
          */
-        fun onPrepared(encoder: Encoder?)
+        fun onPrepared(encoder: CameraEncoder?)
 
         /**
          * callback before releasing encoder
          * @param encoder
          */
-        fun onRelease(encoder: Encoder?)
+        fun onRelease(encoder: CameraEncoder?)
     }
 
     fun startRecording() {
-        synchronized(mSync) {
-            isCapturing = true
+        mLock.withLock {
+            mIsCapturing = true
             mRequestStop = false
-            mSync.notifyAll()
+            mCondition.signalAll()
         }
     }
 
@@ -85,11 +90,11 @@ abstract class Encoder : Runnable {
      */
     fun stopRecording() {
         mRequestStop = true
-        synchronized(mSync) {
-            if (!isCapturing) {
+        mLock.withLock {
+            if (!mIsCapturing) {
                 return
             }
-            mSync.notifyAll()
+            mCondition.signalAll()
         }
     }
 
@@ -108,13 +113,12 @@ abstract class Encoder : Runnable {
      * (request to process frame data)
      */
     fun frameAvailable(): Boolean {
-//    	if (DEBUG) Log.v(TAG, "frameAvailable:");
-        synchronized(mSync) {
-            if (!isCapturing || mRequestStop) {
+        mLock.withLock {
+            if (!mIsCapturing || mRequestStop) {
                 return false
             }
             mRequestDrain++
-            mSync.notifyAll()
+            mCondition.signalAll()
         }
         return true
     }
@@ -123,62 +127,70 @@ abstract class Encoder : Runnable {
      * encoding loop on private thread
      */
     override fun run() {
-        synchronized(mSync) {
+        var isRunning: Boolean? = true
+        var localRequestStop: Boolean? = false
+        var localRequestDrain: Boolean? = false
+
+        mLock.withLock {
             mRequestStop = false
             mRequestDrain = 0
-            mSync.notify()
+            localRequestStop = mRequestStop
+            localRequestDrain = (mRequestDrain > 0)
+            mCondition.signal()
         }
 
-        val isRunning = true
-        var localRequestStop: Boolean
-        var localRequestDrain: Boolean
-
-        WHILE@ while (isRunning) {
-            synchronized(mSync) {
-                localRequestStop = mRequestStop
-                localRequestDrain = mRequestDrain > 0
-                if (localRequestDrain) mRequestDrain--
-            }
-            if (localRequestStop) {
+        WHILE@ while (isRunning!!) {
+            if (localRequestStop!!) {
                 drain()
-                // request stop recording
+                // Request stop recording
                 signalEndOfInputStream()
-                // process output data again for EOS signal
+                // Process output data again for EOS signal
                 drain()
-                // release all related objects
+                // Release all related objects
                 release()
-                break
+                // Signal to stop
+                isRunning = false
+                return@WHILE
             }
-            if (localRequestDrain) {
+
+            if (localRequestDrain!!) {
                 drain()
             } else {
-                synchronized(mSync) {
-                    try {
-                        mSync.wait()
-                    } catch (e: InterruptedException) {
-                        break@WHILE
-                    }
+                try {
+                    mCondition.await()
+                } catch (e: InterruptedException) {
+                    isRunning = false
+                    return@WHILE
                 }
             }
-        } // end of while
 
-        synchronized(mSync) {
+            mLock.withLock {
+                localRequestStop = mRequestStop
+                localRequestDrain = mRequestDrain > 0
+
+                if (localRequestDrain!!) {
+                    mRequestDrain--
+                }
+            }
+        }
+
+        mLock.withLock {
             mRequestStop = true
-            isCapturing = false
+            mIsCapturing = false
         }
     }
     //********************************************************************************
     /**
      * Release all releated objects
      */
-    protected fun release() {
+    protected open fun release() {
         try {
             mEncodeListener!!.onRelease(this)
         } catch (e: Exception) {
             Log.e(TAG, "failed onStopped", e)
         }
 
-        isCapturing = false
+        mIsCapturing = false
 
         if (mMediaCodec != null) {
             try {
@@ -220,11 +232,11 @@ abstract class Encoder : Runnable {
         length: Int,
         presentationTimeUs: Long
     ) {
-        if (!isCapturing) return
+        if (!mIsCapturing) return
         var ix = 0
         var sz: Int
         val inputBuffers = mMediaCodec!!.inputBuffers
-        while (isCapturing && ix < length) {
+        while (mIsCapturing && ix < length) {
             val inputBufferIndex =
                 mMediaCodec!!.dequeueInputBuffer(TIMEOUT_USEC.toLong())
             if (inputBufferIndex >= 0) {
@@ -269,7 +281,7 @@ abstract class Encoder : Runnable {
         var encoderStatus: Int
         var count = 0
 
-        LOOP@ while (isCapturing) {
+        LOOP@ while (mIsCapturing) {
             // get encoded data with maximum timeout duration of TIMEOUT_USEC(=10[msec])
             encoderStatus = mMediaCodec!!.dequeueOutputBuffer(
                 mBufferInfo,
@@ -326,8 +338,8 @@ abstract class Encoder : Runnable {
                 mMediaCodec!!.releaseOutputBuffer(encoderStatus, false)
                 if (mBufferInfo!!.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                     // when EOS come.
-                    isCapturing = false
-                    mMuxerStarted = isCapturing
+                    mIsCapturing = false
+                    mMuxerStarted = mIsCapturing
                     break // out of while
                 }
             }
@@ -337,7 +349,8 @@ abstract class Encoder : Runnable {
     /**
      * previous presentationTimeUs for writing
      */
-    private var prevOutputPTSUs: Long = 0// presentationTimeUs should be monotonic
+    private var prevOutputPTSUs: Long = 0
+    // presentationTimeUs should be monotonic
     // otherwise muxer fail to write
 
     /**
@@ -353,37 +366,32 @@ abstract class Encoder : Runnable {
             return result
         }
 
-    companion object {
-        private const val TAG = "Encoder"
-        protected const val TIMEOUT_USEC = 10000 // 10 milliseconds
+    /**
+     * select primary codec for encoding from the available list which MIME is specific type
+     * return null if nothing is available
+     * @param mimeType
+     */
+    fun selectCodec(mimeType: String?): MediaCodecInfo? {
+        var result: MediaCodecInfo? = null
 
-        /**
-         * select primary codec for encoding from the available list which MIME is specific type
-         * return null if nothing is available
-         * @param mimeType
-         */
-        fun selectCodec(mimeType: String?): MediaCodecInfo? {
-            var result: MediaCodecInfo? = null
+        // get avcodec list
+        val numCodecs = MediaCodecList.getCodecCount()
+        LOOP@ for (i in 0 until numCodecs) {
+            val codecInfo = MediaCodecList.getCodecInfoAt(i)
+            if (!codecInfo.isEncoder) {    // skip decoder
+                continue
+            }
 
-            // get avcodec list
-            val numCodecs = MediaCodecList.getCodecCount()
-            LOOP@ for (i in 0 until numCodecs) {
-                val codecInfo = MediaCodecList.getCodecInfoAt(i)
-                if (!codecInfo.isEncoder) {    // skip decoder
-                    continue
-                }
-
-                // select encoder that MIME is equal to the specific type
-                val types = codecInfo.supportedTypes
-                for (j in types.indices) {
-                    if (types[j].equals(mimeType, ignoreCase = true)) {
-                        result = codecInfo
-                        break@LOOP
-                    }
+            // select encoder that MIME is equal to the specific type
+            val types = codecInfo.supportedTypes
+            for (j in types.indices) {
+                if (types[j].equals(mimeType, ignoreCase = true)) {
+                    result = codecInfo
+                    break@LOOP
                 }
             }
-            return result
         }
+        return result
     }
     //********************************************************************************
 }

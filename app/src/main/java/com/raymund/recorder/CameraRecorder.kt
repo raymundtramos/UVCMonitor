@@ -5,8 +5,10 @@ import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import android.media.MediaRecorder.MetricsConstants.CAPTURE_FPS
+import android.os.Environment
 import android.util.Log
 import android.view.Surface
+import java.io.File
 import java.io.IOException
 
 
@@ -24,13 +26,18 @@ class CameraRecorder : CameraEncoder {
         mMediaWidth = width
         mMediaHeight = height
         mMediaFramerate = framerate
-    }
 
-    public fun startRecord() {
-        
-    }
-
-    public fun endRecord() {
+        var dirMov: File =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+        var dirFinal: File = File(
+            dirMov,
+            "UvcMonitorTest"
+        )
+        dirFinal.mkdirs()
+        if (dirFinal.canWrite()) {
+            val randomFileNumber = Math.random().toInt().toString()
+            setOutputFile(File(dirFinal, randomFileNumber + ".mp4").toString())
+        }
     }
 
     public fun updateProperties(width: Int, height: Int, framerate: Int) {

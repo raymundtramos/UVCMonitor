@@ -3,23 +3,30 @@ package com.raymund.uvcmonitor
 import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
-import android.view.*
+import android.view.Surface
+import android.view.TextureView
+import android.view.View
 import android.widget.ImageButton
 import android.widget.Toast
+import com.raymund.recorder.CameraEncoder
+import com.raymund.recorder.CameraEncoder.EncodeListener
 import com.raymund.recorder.CameraRecorder
 import com.raymund.widget.CameraTextureView
 import com.serenegiant.common.BaseActivity
+import com.serenegiant.media.SurfaceEncoder
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.CameraDialog.CameraDialogParent
 import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.USBMonitor.OnDeviceConnectListener
 import com.serenegiant.usb.USBMonitor.UsbControlBlock
 import com.serenegiant.usb.UVCCamera
+import java.io.IOException
+
 
 class MainActivity : BaseActivity(), CameraDialogParent {
     private var mUSBMonitor: USBMonitor? = null
     private var mUVCCamera: UVCCamera? = null
-    private var mRecorder: CameraRecorder? = null
+    private var mEncoder: CameraRecorder? = null
 
     private var mCameraView: CameraTextureView? = null
     private var mCameraButton: ImageButton? = null
@@ -29,6 +36,8 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private val STATE_DISCONNECTED = 0
     private val STATE_CONNECTED = 1
     private val STATE_RECORDING = 2
+    private val STATE_RECORD_PREPARE = 3
+    private val STATE_RECORD_STOP = 4
     private var mState: Int? = STATE_DISCONNECTED
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +67,10 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         destroyUVCCamera()
         destroyViewAndMonitor()
         super.onDestroy()
+    }
+
+    private fun toastUser(msg: String) {
+        Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
     }
 
     private fun destroyViewAndMonitor() {
@@ -91,10 +104,12 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     private val mRecordOnClickListener: View.OnClickListener = View.OnClickListener {
-        if (mState == STATE_CONNECTED) {
-            mRecorder!!.startRecord();
-        } else if (mState == STATE_RECORDING) {
-            mRecorder!!.endRecord();
+        if (checkPermissionWriteExternalStorage()) {
+            if (mState == STATE_CONNECTED || mState == STATE_RECORD_STOP) {
+                startCapture()
+            } else if (mState == STATE_RECORDING) {
+                stopCapture()
+            }
         }
     }
 
@@ -109,7 +124,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             }
 
             override fun onAttach(device: UsbDevice) {
-                Toast.makeText(this@MainActivity, "USB device detected", Toast.LENGTH_SHORT).show()
+                toastUser("USB device detected");
             }
 
             override fun onConnect(
@@ -141,10 +156,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                     camera.setPreviewDisplay(mPreviewSurface)
                     camera.startPreview()
                     mUVCCamera = camera
-                    mRecorder = CameraRecorder(
-                        UVCCamera.DEFAULT_PREVIEW_WIDTH,
-                        UVCCamera.DEFAULT_PREVIEW_HEIGHT,
-                    30)
                     mState = STATE_CONNECTED
                 }, 0)
             }
@@ -159,7 +170,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             }
 
             override fun onDettach(device: UsbDevice) {
-                Toast.makeText(this@MainActivity, "USB device detached", Toast.LENGTH_SHORT).show()
+                toastUser("USB device detached");
             }
 
             override fun onCancel(device: UsbDevice) {
@@ -181,8 +192,12 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     private val mSurfaceTextureListener: TextureView.SurfaceTextureListener =
-        object : TextureView.SurfaceTextureListener{
-            override fun onSurfaceTextureAvailable(surface: SurfaceTexture?, width: Int, height: Int) {
+        object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(
+                surface: SurfaceTexture?,
+                width: Int,
+                height: Int
+            ) {
             }
 
             override fun onSurfaceTextureSizeChanged(
@@ -193,15 +208,70 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             }
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture?) {
-                // TODO: Add Video Encoder code here
+                if (mEncoder != null && mState == STATE_RECORDING) {
+                    mEncoder!!.frameAvailable()
+                }
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture?): Boolean {
-                if(mPreviewSurface != null) {
+                if (mPreviewSurface != null) {
                     mPreviewSurface!!.release()
                     mPreviewSurface = null
                 }
                 return true
             }
         }
+
+    private val mEncodeListener: EncodeListener = object : EncodeListener {
+        override fun onPrepared(encoder: CameraEncoder?) {
+            if (mUVCCamera != null) {
+                mUVCCamera!!.startCapture((encoder as CameraRecorder).getInputSurface())
+            }
+            mState = STATE_RECORDING
+            toastUser("Finish Preparing")
+        }
+
+        override fun onRelease(encoder: CameraEncoder?) {
+            if (mUVCCamera != null) {
+                mUVCCamera!!.stopCapture()
+            }
+            mState = STATE_RECORD_STOP
+            toastUser("Finish Releasing")
+        }
+    }
+
+    private fun startCapture() {
+        if (mEncoder == null && (mState == STATE_CONNECTED || mState == STATE_RECORD_STOP)) {
+            mState = STATE_RECORD_PREPARE
+            queueEvent({
+                mEncoder = CameraRecorder(
+                    UVCCamera.DEFAULT_PREVIEW_WIDTH,
+                    UVCCamera.DEFAULT_PREVIEW_HEIGHT,
+                    30
+                )
+                mEncoder!!.setEncodeListener(mEncodeListener)
+                try {
+                    mEncoder!!.prepare()
+                    mEncoder!!.startRecording()
+                    toastUser("Started Recording")
+                } catch (e: IOException) {
+                    mState = STATE_RECORD_STOP
+                    toastUser("Error happened")
+                }
+            }, 0)
+        }
+    }
+
+    private fun stopCapture() {
+        queueEvent({
+            if (mUVCCamera != null) {
+                mUVCCamera!!.stopCapture()
+            }
+            if (mEncoder != null) {
+                mEncoder!!.stopRecording()
+                mEncoder = null
+            }
+            toastUser("Stopped Recording")
+        }, 0)
+    }
 }

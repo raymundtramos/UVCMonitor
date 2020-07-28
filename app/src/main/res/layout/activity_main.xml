@@ -4,13 +4,14 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.serenegiant.usbcameratest0.MainActivity"
+    tools:context="com.raymund.uvcmonitor.MainActivity"
     tools:ignore="MergeRootFrame" >
 
-    <SurfaceView
-        android:id="@+id/camera_surface_view"
+    <com.raymund.widget.CameraTextureView
+        android:id="@+id/camera_texture_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_gravity="center" />
 
     <ImageButton
         android:id="@+id/camera_button"

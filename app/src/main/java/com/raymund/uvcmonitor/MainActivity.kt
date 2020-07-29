@@ -65,6 +65,11 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     override fun onStop() {
+        mLock.withLock {
+            if (mState == stateRecording) {
+                stopCapture()
+            }
+        }
         mUSBMonitor!!.unregister()
         super.onStop()
     }
@@ -222,7 +227,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture?) {
                 if (mEncoder != null && mState == stateRecording) {
-                    Log.i(logTag,"Called frameAvailable")
+                    Log.i(logTag, "Called frameAvailable")
                     mEncoder!!.frameAvailable()
                 }
             }
@@ -244,7 +249,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 }
                 mState = stateRecording
             }
-            Log.i(logTag,"Finished preparing")
+            Log.i(logTag, "Finished preparing")
         }
 
         override fun onRelease(encoder: CameraEncoder?) {
@@ -254,7 +259,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 }
                 mState = stateRecordStop
             }
-            Log.i(logTag,"Finished releasing")
+            Log.i(logTag, "Finished releasing")
         }
     }
 
@@ -290,8 +295,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                     mEncoder!!.stopRecording()
                     mEncoder = null
                 }
+                mState = stateRecordStop
             }
-            toastUser("Stopped Recording")
+            toastUser("Stopped Recording") //TODO: Need to move this. Doesn't finish when onStop called
         }, 0)
     }
 }

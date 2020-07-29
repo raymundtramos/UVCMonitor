@@ -3,6 +3,7 @@ package com.raymund.uvcmonitor
 import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
+import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -21,9 +22,14 @@ import com.serenegiant.usb.USBMonitor.OnDeviceConnectListener
 import com.serenegiant.usb.USBMonitor.UsbControlBlock
 import com.serenegiant.usb.UVCCamera
 import java.io.IOException
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 
 class MainActivity : BaseActivity(), CameraDialogParent {
+    private val mLock = ReentrantLock()
+    private val mCondition = mLock.newCondition()
+
     private var mUSBMonitor: USBMonitor? = null
     private var mUVCCamera: UVCCamera? = null
     private var mEncoder: CameraRecorder? = null
@@ -33,6 +39,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private var mRecordButton: ImageButton? = null
     private var mPreviewSurface: Surface? = null
 
+    private val TAG = "MainActivity"
     private val STATE_DISCONNECTED = 0
     private val STATE_CONNECTED = 1
     private val STATE_RECORDING = 2
@@ -55,7 +62,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     override fun onStart() {
         super.onStart()
-        mUSBMonitor!!.register()
+        mLock.withLock {
+            mUSBMonitor!!.register()
+        }
     }
 
     override fun onStop() {
@@ -74,25 +83,29 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     private fun destroyViewAndMonitor() {
-        mCameraView = null
-        mCameraButton = null
-        mRecordButton = null
-        if (mUSBMonitor != null) {
-            mUSBMonitor!!.destroy()
-            mUSBMonitor = null
+        mLock.withLock {
+            mCameraView = null
+            mCameraButton = null
+            mRecordButton = null
+            if (mUSBMonitor != null) {
+                mUSBMonitor!!.destroy()
+                mUSBMonitor = null
+            }
         }
     }
 
     private fun destroyUVCCamera() {
-        if (mUVCCamera != null) {
-            mUVCCamera!!.destroy()
-            mUVCCamera = null
+        mLock.withLock {
+            if (mUVCCamera != null) {
+                mUVCCamera!!.destroy()
+                mUVCCamera = null
+            }
+            if (mPreviewSurface != null) {
+                mPreviewSurface!!.release()
+                mPreviewSurface = null
+            }
+            mState = STATE_DISCONNECTED
         }
-        if (mPreviewSurface != null) {
-            mPreviewSurface!!.release()
-            mPreviewSurface = null
-        }
-        mState = STATE_DISCONNECTED
     }
 
     private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {
@@ -155,8 +168,11 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                     mPreviewSurface = Surface(surfaceTexture)
                     camera.setPreviewDisplay(mPreviewSurface)
                     camera.startPreview()
-                    mUVCCamera = camera
-                    mState = STATE_CONNECTED
+
+                    mLock.withLock {
+                        mUVCCamera = camera
+                        mState = STATE_CONNECTED
+                    }
                 }, 0)
             }
 
@@ -210,6 +226,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture?) {
                 if (mEncoder != null && mState == STATE_RECORDING) {
                     mEncoder!!.frameAvailable()
+                    Log.i(TAG,"Called frameAvailable")
                 }
             }
 
@@ -224,19 +241,23 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     private val mEncodeListener: EncodeListener = object : EncodeListener {
         override fun onPrepared(encoder: CameraEncoder?) {
-            if (mUVCCamera != null) {
-                mUVCCamera!!.startCapture((encoder as CameraRecorder).getInputSurface())
+            mLock.withLock {
+                if (mUVCCamera != null) {
+                    mUVCCamera!!.startCapture((encoder as CameraRecorder).getInputSurface())
+                }
+                mState = STATE_RECORDING
             }
-            mState = STATE_RECORDING
-            toastUser("Finish Preparing")
+            Log.i(TAG,"Finished preparing")
         }
 
         override fun onRelease(encoder: CameraEncoder?) {
-            if (mUVCCamera != null) {
-                mUVCCamera!!.stopCapture()
+            mLock.withLock {
+                if (mUVCCamera != null) {
+                    mUVCCamera!!.stopCapture()
+                }
+                mState = STATE_RECORD_STOP
             }
-            mState = STATE_RECORD_STOP
-            toastUser("Finish Releasing")
+            Log.i(TAG,"Finished releasing")
         }
     }
 
@@ -256,7 +277,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                     toastUser("Started Recording")
                 } catch (e: IOException) {
                     mState = STATE_RECORD_STOP
-                    toastUser("Error happened")
+                    Log.e(TAG,e.toString())
                 }
             }, 0)
         }
@@ -264,12 +285,14 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     private fun stopCapture() {
         queueEvent({
-            if (mUVCCamera != null) {
-                mUVCCamera!!.stopCapture()
-            }
-            if (mEncoder != null) {
-                mEncoder!!.stopRecording()
-                mEncoder = null
+            mLock.withLock {
+                if (mUVCCamera != null) {
+                    mUVCCamera!!.stopCapture()
+                }
+                if (mEncoder != null) {
+                    mEncoder!!.stopRecording()
+                    mEncoder = null
+                }
             }
             toastUser("Stopped Recording")
         }, 0)

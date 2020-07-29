@@ -35,7 +35,7 @@ class CameraRecorder : CameraEncoder {
         )
         dirFinal.mkdirs()
         if (dirFinal.canWrite()) {
-            val randomFileNumber = Math.random().toInt().toString()
+            val randomFileNumber = (Math.random() * Math.floor(10000000.toDouble())).toInt().toString()
             setOutputFile(File(dirFinal, randomFileNumber + ".mp4").toString())
         }
     }

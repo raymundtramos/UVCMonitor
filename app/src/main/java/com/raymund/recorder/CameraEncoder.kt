@@ -12,8 +12,8 @@ import kotlin.concurrent.withLock
 abstract class CameraEncoder : Runnable {
     private val mLock = ReentrantLock()
     private val mCondition = mLock.newCondition()
+    private val TIMEOUT_USEC = 10000 // 10 milliseconds
     protected val TAG = "CameraEncoder"
-    protected val TIMEOUT_USEC = 10000 // 10 milliseconds
 
     //********************************************************************************
     /**
@@ -77,6 +77,17 @@ abstract class CameraEncoder : Runnable {
         fun onRelease(encoder: CameraEncoder?)
     }
 
+    constructor() {
+        mLock.withLock {
+            Thread(this, javaClass.simpleName).start()
+            try {
+                // wait for starting thread
+                mCondition.await()
+            } catch (e: InterruptedException) {
+            }
+        }
+    }
+
     fun startRecording() {
         mLock.withLock {
             mIsCapturing = true
@@ -100,6 +111,7 @@ abstract class CameraEncoder : Runnable {
 
     fun setOutputFile(filePath: String?) {
         mOutputPath = filePath
+        Log.i(TAG, filePath)
     }
 
     @Throws(IOException::class)
@@ -156,11 +168,13 @@ abstract class CameraEncoder : Runnable {
             if (localRequestDrain!!) {
                 drain()
             } else {
-                try {
-                    mCondition.await()
-                } catch (e: InterruptedException) {
-                    isRunning = false
-                    return@WHILE
+                mLock.withLock {
+                    try {
+                        mCondition.await()
+                    } catch (e: InterruptedException) {
+                        isRunning = false
+                        //return@WHILE
+                    }
                 }
             }
 
@@ -253,14 +267,21 @@ abstract class CameraEncoder : Runnable {
                     // send EOS
                     mIsEOS = true
                     mMediaCodec!!.queueInputBuffer(
-                        inputBufferIndex, 0, 0,
-                        presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                        inputBufferIndex,
+                        0,
+                        0,
+                        presentationTimeUs,
+                        MediaCodec.BUFFER_FLAG_END_OF_STREAM
                     )
+                    Log.i(TAG, "send BUFFER_FLAG_END_OF_STREAM");
                     break
                 } else {
                     mMediaCodec!!.queueInputBuffer(
-                        inputBufferIndex, 0, sz,
-                        presentationTimeUs, 0
+                        inputBufferIndex,
+                        0,
+                        sz,
+                        presentationTimeUs,
+                        0
                     )
                 }
             }
@@ -280,6 +301,11 @@ abstract class CameraEncoder : Runnable {
         var encoderOutputBuffers = mMediaCodec!!.outputBuffers
         var encoderStatus: Int
         var count = 0
+
+        if (mMuxer == null) {
+            Log.w(TAG, "muxer is unexpectedly null");
+            return
+        }
 
         LOOP@ while (mIsCapturing) {
             // get encoded data with maximum timeout duration of TIMEOUT_USEC(=10[msec])

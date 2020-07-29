@@ -14,7 +14,6 @@ import com.raymund.recorder.CameraEncoder.EncodeListener
 import com.raymund.recorder.CameraRecorder
 import com.raymund.widget.CameraTextureView
 import com.serenegiant.common.BaseActivity
-import com.serenegiant.media.SurfaceEncoder
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.CameraDialog.CameraDialogParent
 import com.serenegiant.usb.USBMonitor
@@ -25,10 +24,8 @@ import java.io.IOException
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-
 class MainActivity : BaseActivity(), CameraDialogParent {
     private val mLock = ReentrantLock()
-    private val mCondition = mLock.newCondition()
 
     private var mUSBMonitor: USBMonitor? = null
     private var mUVCCamera: UVCCamera? = null
@@ -39,22 +36,22 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private var mRecordButton: ImageButton? = null
     private var mPreviewSurface: Surface? = null
 
-    private val TAG = "MainActivity"
-    private val STATE_DISCONNECTED = 0
-    private val STATE_CONNECTED = 1
-    private val STATE_RECORDING = 2
-    private val STATE_RECORD_PREPARE = 3
-    private val STATE_RECORD_STOP = 4
-    private var mState: Int? = STATE_DISCONNECTED
+    private val logTag = "MainActivity"
+    private val stateDisconnected = 0
+    private val stateConnected = 1
+    private val stateRecording = 2
+    private val stateRecordPrepare = 3
+    private val stateRecordStop = 4
+    private var mState: Int = stateDisconnected
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        mCameraButton = findViewById<View>(R.id.camera_button) as ImageButton
+        mCameraButton = findViewById(R.id.camera_button)
         mCameraButton!!.setOnClickListener(mDeviceOnClickListener)
-        mRecordButton = findViewById(R.id.record_button) as ImageButton
+        mRecordButton = findViewById(R.id.record_button)
         mRecordButton!!.setOnClickListener(mRecordOnClickListener)
-        mCameraView = findViewById<View>(R.id.camera_texture_view) as CameraTextureView
+        mCameraView = findViewById(R.id.camera_texture_view)
         mCameraView!!.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (UVCCamera.DEFAULT_PREVIEW_HEIGHT).toDouble())
         mCameraView!!.surfaceTextureListener = mSurfaceTextureListener
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
@@ -104,7 +101,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 mPreviewSurface!!.release()
                 mPreviewSurface = null
             }
-            mState = STATE_DISCONNECTED
+            mState = stateDisconnected
         }
     }
 
@@ -118,9 +115,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     private val mRecordOnClickListener: View.OnClickListener = View.OnClickListener {
         if (checkPermissionWriteExternalStorage()) {
-            if (mState == STATE_CONNECTED || mState == STATE_RECORD_STOP) {
+            if (mState == stateConnected || mState == stateRecordStop) {
                 startCapture()
-            } else if (mState == STATE_RECORDING) {
+            } else if (mState == stateRecording) {
                 stopCapture()
             }
         }
@@ -137,7 +134,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             }
 
             override fun onAttach(device: UsbDevice) {
-                toastUser("USB device detected");
+                toastUser("USB device detected")
             }
 
             override fun onConnect(
@@ -171,7 +168,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
                     mLock.withLock {
                         mUVCCamera = camera
-                        mState = STATE_CONNECTED
+                        mState = stateConnected
                     }
                 }, 0)
             }
@@ -186,7 +183,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             }
 
             override fun onDettach(device: UsbDevice) {
-                toastUser("USB device detached");
+                toastUser("USB device detached")
             }
 
             override fun onCancel(device: UsbDevice) {
@@ -224,9 +221,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             }
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture?) {
-                if (mEncoder != null && mState == STATE_RECORDING) {
+                if (mEncoder != null && mState == stateRecording) {
+                    Log.i(logTag,"Called frameAvailable")
                     mEncoder!!.frameAvailable()
-                    Log.i(TAG,"Called frameAvailable")
                 }
             }
 
@@ -245,9 +242,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 if (mUVCCamera != null) {
                     mUVCCamera!!.startCapture((encoder as CameraRecorder).getInputSurface())
                 }
-                mState = STATE_RECORDING
+                mState = stateRecording
             }
-            Log.i(TAG,"Finished preparing")
+            Log.i(logTag,"Finished preparing")
         }
 
         override fun onRelease(encoder: CameraEncoder?) {
@@ -255,15 +252,15 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 if (mUVCCamera != null) {
                     mUVCCamera!!.stopCapture()
                 }
-                mState = STATE_RECORD_STOP
+                mState = stateRecordStop
             }
-            Log.i(TAG,"Finished releasing")
+            Log.i(logTag,"Finished releasing")
         }
     }
 
     private fun startCapture() {
-        if (mEncoder == null && (mState == STATE_CONNECTED || mState == STATE_RECORD_STOP)) {
-            mState = STATE_RECORD_PREPARE
+        if (mEncoder == null && (mState == stateConnected || mState == stateRecordStop)) {
+            mState = stateRecordPrepare
             queueEvent({
                 mEncoder = CameraRecorder(
                     UVCCamera.DEFAULT_PREVIEW_WIDTH,
@@ -276,8 +273,8 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                     mEncoder!!.startRecording()
                     toastUser("Started Recording")
                 } catch (e: IOException) {
-                    mState = STATE_RECORD_STOP
-                    Log.e(TAG,e.toString())
+                    mState = stateRecordStop
+                    Log.e(logTag, "Failed startCapture", e)
                 }
             }, 0)
         }

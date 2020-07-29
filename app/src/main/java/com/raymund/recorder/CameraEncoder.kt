@@ -12,46 +12,31 @@ import kotlin.concurrent.withLock
 abstract class CameraEncoder : Runnable {
     private val mLock = ReentrantLock()
     private val mCondition = mLock.newCondition()
-    private val TIMEOUT_USEC = 10000 // 10 milliseconds
-    protected val TAG = "CameraEncoder"
 
-    //********************************************************************************
-    /**
-     * Flag that indicate this encoder is capturing now.
-     */
+    private val timeoutUsec = 10000 // 10 milliseconds
+    protected val logTag = "CameraEncoder"
+
+    // Flag that indicate this encoder is capturing now.
     @Volatile
     protected var mIsCapturing = false
-        protected set
 
-    /**
-     * Flag that indicate the frame data will be available soon.
-     */
+    // Flag that indicate the frame data will be available soon.
     private var mRequestDrain = 0
 
-    /**
-     * Flag to request stop capturing
-     */
+    // Flag to request stop capturing
     @Volatile
     protected var mRequestStop = false
 
-    /**
-     * Flag that indicate encoder received EOS(End Of Stream)
-     */
+    // Flag that indicate encoder received EOS(End Of Stream)
     protected var mIsEOS = false
 
-    /**
-     * Flag the indicate the muxer is running
-     */
+    // Flag the indicate the muxer is running
     protected var mMuxerStarted = false
 
-    /**
-     * Track Number
-     */
+    // Track Number
     protected var mTrackIndex = 0
 
-    /**
-     * MediaCodec instance for encoding
-     */
+    // MediaCodec instance for encoding
     protected var mMediaCodec // API >= 16(Android4.1.2)
             : MediaCodec? = null
     protected var mEncodeListener
@@ -64,30 +49,17 @@ abstract class CameraEncoder : Runnable {
             : MediaMuxer? = null
 
     interface EncodeListener {
-        /**
-         * callback after finishing initialization of encoder
-         * @param encoder
-         */
+        // Callback after finishing initialization of encoder
         fun onPrepared(encoder: CameraEncoder?)
 
-        /**
-         * callback before releasing encoder
-         * @param encoder
-         */
+        // Callback before releasing encoder
         fun onRelease(encoder: CameraEncoder?)
     }
 
-    constructor() {
-        mLock.withLock {
-            Thread(this, javaClass.simpleName).start()
-            try {
-                // wait for starting thread
-                mCondition.await()
-            } catch (e: InterruptedException) {
-            }
-        }
-    }
+    @Throws(IOException::class)
+    abstract fun prepare()
 
+    // Method to request to start encoding
     fun startRecording() {
         mLock.withLock {
             mIsCapturing = true
@@ -96,9 +68,7 @@ abstract class CameraEncoder : Runnable {
         }
     }
 
-    /**
-     * the method to request stop encoding
-     */
+    // Method to request to stop encoding
     fun stopRecording() {
         mRequestStop = true
         mLock.withLock {
@@ -110,20 +80,17 @@ abstract class CameraEncoder : Runnable {
     }
 
     fun setOutputFile(filePath: String?) {
+        Log.i(logTag, filePath)
         mOutputPath = filePath
-        Log.i(TAG, filePath)
     }
 
-    @Throws(IOException::class)
-    abstract fun prepare()
+
     fun setEncodeListener(listener: EncodeListener?) {
         mEncodeListener = listener
     }
 
-    /**
-     * notify to frame data will arrive soon or already arrived.
-     * (request to process frame data)
-     */
+    // Notify to frame data will arrive soon or already arrived.
+    // (request to process frame data)
     fun frameAvailable(): Boolean {
         mLock.withLock {
             if (!mIsCapturing || mRequestStop) {
@@ -135,9 +102,7 @@ abstract class CameraEncoder : Runnable {
         return true
     }
 
-    /**
-     * encoding loop on private thread
-     */
+    //encoding loop on private thread
     override fun run() {
         var isRunning: Boolean? = true
         var localRequestStop: Boolean? = false
@@ -193,15 +158,13 @@ abstract class CameraEncoder : Runnable {
             mIsCapturing = false
         }
     }
-    //********************************************************************************
-    /**
-     * Release all releated objects
-     */
+
+    // Release all related objects
     protected open fun release() {
         try {
             mEncodeListener!!.onRelease(this)
         } catch (e: Exception) {
-            Log.e(TAG, "failed onStopped", e)
+            Log.e(logTag, "Failed onRelease()", e)
         }
 
         mIsCapturing = false
@@ -212,7 +175,7 @@ abstract class CameraEncoder : Runnable {
                 mMediaCodec!!.release()
                 mMediaCodec = null
             } catch (e: Exception) {
-                Log.e(TAG, "failed releasing MediaCodec", e)
+                Log.e(logTag, "Failed releasing MediaCodec", e)
             }
         }
 
@@ -221,7 +184,7 @@ abstract class CameraEncoder : Runnable {
                 try {
                     mMuxer!!.stop()
                 } catch (e: Exception) {
-                    Log.e(TAG, "failed stopping muxer", e)
+                    Log.e(logTag, "Failed stopping Muxer", e)
                 }
             }
         }
@@ -229,30 +192,21 @@ abstract class CameraEncoder : Runnable {
         mBufferInfo = null
     }
 
-    protected fun signalEndOfInputStream() {
+    private fun signalEndOfInputStream() {
         // signalEndOfInputStream is only available for video encoding with surface
         // and equivalent sending a empty buffer with BUFFER_FLAG_END_OF_STREAM flag.
         encode(null, 0, pTSUs)
     }
 
-    /**
-     * Method to set byte array to the MediaCodec encoder
-     * @param buffer
-     * @param length　length of byte array, zero means EOS.
-     * @param presentationTimeUs
-     */
-    protected fun encode(
-        buffer: ByteArray?,
-        length: Int,
-        presentationTimeUs: Long
-    ) {
+    // Method to set byte array to the MediaCodec encoder
+    private fun encode(buffer: ByteArray?, length: Int, presentationTimeUs: Long) {
         if (!mIsCapturing) return
         var ix = 0
         var sz: Int
         val inputBuffers = mMediaCodec!!.inputBuffers
         while (mIsCapturing && ix < length) {
             val inputBufferIndex =
-                mMediaCodec!!.dequeueInputBuffer(TIMEOUT_USEC.toLong())
+                mMediaCodec!!.dequeueInputBuffer(timeoutUsec.toLong())
             if (inputBufferIndex >= 0) {
                 val inputBuffer = inputBuffers[inputBufferIndex]
                 inputBuffer.clear()
@@ -273,7 +227,6 @@ abstract class CameraEncoder : Runnable {
                         presentationTimeUs,
                         MediaCodec.BUFFER_FLAG_END_OF_STREAM
                     )
-                    Log.i(TAG, "send BUFFER_FLAG_END_OF_STREAM");
                     break
                 } else {
                     mMediaCodec!!.queueInputBuffer(
@@ -292,10 +245,8 @@ abstract class CameraEncoder : Runnable {
         }
     }
 
-    /**
-     * drain encoded data and write them to muxer
-     */
-    protected fun drain() {
+    // Drain encoded data and write them to muxer
+    private fun drain() {
         if (mMediaCodec == null) return
 
         var encoderOutputBuffers = mMediaCodec!!.outputBuffers
@@ -303,7 +254,6 @@ abstract class CameraEncoder : Runnable {
         var count = 0
 
         if (mMuxer == null) {
-            Log.w(TAG, "muxer is unexpectedly null");
             return
         }
 
@@ -311,7 +261,7 @@ abstract class CameraEncoder : Runnable {
             // get encoded data with maximum timeout duration of TIMEOUT_USEC(=10[msec])
             encoderStatus = mMediaCodec!!.dequeueOutputBuffer(
                 mBufferInfo,
-                TIMEOUT_USEC.toLong()
+                timeoutUsec.toLong()
             )
             if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
                 // wait 5 counts(=TIMEOUT_USEC x 5 = 50msec) until data/EOS come
@@ -372,35 +322,29 @@ abstract class CameraEncoder : Runnable {
         }
     }
 
-    /**
-     * previous presentationTimeUs for writing
-     */
+    // Previous presentationTimeUs for writing
     private var prevOutputPTSUs: Long = 0
     // presentationTimeUs should be monotonic
     // otherwise muxer fail to write
 
-    /**
-     * get next encoding presentationTimeUs
-     * @return
-     */
-    protected val pTSUs: Long
-        protected get() {
+    // Get next encoding presentationTimeUs
+    private val pTSUs: Long
+        get() {
             var result = System.nanoTime() / 1000L
             // presentationTimeUs should be monotonic
             // otherwise muxer fail to write
-            if (result < prevOutputPTSUs) result = prevOutputPTSUs - result + result
+            if (result < prevOutputPTSUs) {
+                result += (prevOutputPTSUs - result)
+            }
             return result
         }
 
-    /**
-     * select primary codec for encoding from the available list which MIME is specific type
-     * return null if nothing is available
-     * @param mimeType
-     */
+    // Select primary codec for encoding from the available list which MIME is specific type
+    // return null if nothing is available
     fun selectCodec(mimeType: String?): MediaCodecInfo? {
         var result: MediaCodecInfo? = null
 
-        // get avcodec list
+        // Get codec list
         val numCodecs = MediaCodecList.getCodecCount()
         LOOP@ for (i in 0 until numCodecs) {
             val codecInfo = MediaCodecList.getCodecInfoAt(i)
@@ -419,5 +363,16 @@ abstract class CameraEncoder : Runnable {
         }
         return result
     }
-    //********************************************************************************
+
+    init {
+        mLock.withLock {
+            Thread(this, javaClass.simpleName).start()
+            try {
+                // wait for starting thread
+                mCondition.await()
+            } catch (e: InterruptedException) {
+                Log.e(logTag, "Failed at constructor", e)
+            }
+        }
+    }
 }

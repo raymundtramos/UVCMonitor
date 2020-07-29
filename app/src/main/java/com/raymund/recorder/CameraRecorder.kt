@@ -4,7 +4,6 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.media.MediaMuxer
-import android.media.MediaRecorder.MetricsConstants.CAPTURE_FPS
 import android.os.Environment
 import android.util.Log
 import android.view.Surface
@@ -16,11 +15,11 @@ class CameraRecorder : CameraEncoder {
     private var mMediaWidth: Int = 640
     private var mMediaHeight: Int = 480
     private var mMediaFramerate: Int = 30
-    protected var mInputSurface: Surface? = null
+    private var mInputSurface: Surface? = null
 
-    private val MIME_TYPE = "video/avc"
-    private val BIT_RATE = 1000000
-    private val IFRAME_INTERVAL = 10
+    private val mimeType = "video/avc"
+    private val bitrate = 1000000
+    private val iframeInterval = 10
 
     constructor(width: Int, height: Int, framerate: Int) : super() {
         mMediaWidth = width
@@ -41,7 +40,7 @@ class CameraRecorder : CameraEncoder {
     }
 
     public fun updateProperties(width: Int, height: Int, framerate: Int) {
-        // TODO: Add code when code for the
+        // TODO: Add code when code for the size of the video changes
     }
 
     public fun getInputSurface(): Surface? {
@@ -55,7 +54,7 @@ class CameraRecorder : CameraEncoder {
         mIsCapturing = true
         mIsEOS = false
 
-        val codecInfo = selectCodec(MIME_TYPE)
+        val codecInfo = selectCodec(mimeType)
         if (codecInfo == null) {
             return
         }
@@ -63,7 +62,7 @@ class CameraRecorder : CameraEncoder {
         mBufferInfo = MediaCodec.BufferInfo()
 
         val format = MediaFormat.createVideoFormat(
-            MIME_TYPE,
+            mimeType,
             mMediaWidth,
             mMediaHeight
         )
@@ -75,7 +74,7 @@ class CameraRecorder : CameraEncoder {
         )
         format.setInteger(
             MediaFormat.KEY_BIT_RATE,
-            BIT_RATE
+            bitrate
         )
         format.setInteger(
             MediaFormat.KEY_FRAME_RATE,
@@ -83,11 +82,11 @@ class CameraRecorder : CameraEncoder {
         )
         format.setInteger(
             MediaFormat.KEY_I_FRAME_INTERVAL,
-            IFRAME_INTERVAL
+            iframeInterval
         )
 
         // Create a MediaCodec encoder with specific configuration
-        mMediaCodec = MediaCodec.createEncoderByType(MIME_TYPE)
+        mMediaCodec = MediaCodec.createEncoderByType(mimeType)
         mMediaCodec!!.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
         // Get Surface for input to encoder
@@ -100,7 +99,7 @@ class CameraRecorder : CameraEncoder {
             try {
                 mEncodeListener!!.onPrepared(this)
             } catch (e: Exception) {
-                Log.w(TAG, e)
+                Log.w(logTag, e)
             }
         }
     }

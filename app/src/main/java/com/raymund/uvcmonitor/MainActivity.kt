@@ -44,6 +44,10 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private val stateRecordStop = 4
     private var mState: Int = stateDisconnected
 
+    // TODO: Need to find a way to dynamically change this
+    private val mMediaWidth = UVCCamera.DEFAULT_PREVIEW_WIDTH
+    private val mMediaHeight = UVCCamera.DEFAULT_PREVIEW_HEIGHT
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -52,7 +56,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         mRecordButton = findViewById(R.id.record_button)
         mRecordButton!!.setOnClickListener(mRecordOnClickListener)
         mCameraView = findViewById(R.id.camera_texture_view)
-        mCameraView!!.setAspectRatio(UVCCamera.DEFAULT_PREVIEW_WIDTH / (UVCCamera.DEFAULT_PREVIEW_HEIGHT).toDouble())
+        mCameraView!!.setAspectRatio(mMediaWidth / mMediaHeight.toDouble())
         mCameraView!!.surfaceTextureListener = mSurfaceTextureListener
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
     }
@@ -132,8 +136,8 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         object : OnDeviceConnectListener {
             private fun initCamera(camera: UVCCamera, mode: Int) {
                 camera.setPreviewSize(
-                    UVCCamera.DEFAULT_PREVIEW_WIDTH,
-                    UVCCamera.DEFAULT_PREVIEW_HEIGHT,
+                    mMediaWidth,
+                    mMediaHeight,
                     mode
                 )
             }
@@ -268,8 +272,8 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             mState = stateRecordPrepare
             queueEvent({
                 mEncoder = CameraRecorder(
-                    UVCCamera.DEFAULT_PREVIEW_WIDTH,
-                    UVCCamera.DEFAULT_PREVIEW_HEIGHT,
+                    mMediaWidth,
+                    mMediaHeight,
                     30
                 )
                 mEncoder!!.setEncodeListener(mEncodeListener)

@@ -1,11 +1,8 @@
 package com.raymund.uvcmonitor
 
-import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
-import android.util.Log
 import android.view.Surface
-import android.view.TextureView
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
@@ -19,8 +16,6 @@ import com.serenegiant.usb.USBMonitor.UsbControlBlock
 import com.serenegiant.usb.UVCCamera
 import com.serenegiant.usbcameracommon.UVCCameraHandler
 import com.serenegiant.widget.UVCCameraTextureView
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 
 class MainActivity : BaseActivity(), CameraDialogParent {
     private var mUSBMonitor: USBMonitor? = null
@@ -98,12 +93,19 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
     }
 
-    private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {
+    private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {s
         CameraDialog.showDialog(this@MainActivity)
     }
 
     private val mRecordOnClickListener: View.OnClickListener = View.OnClickListener {
         if (checkPermissionWriteExternalStorage()) {
+            if (!mCameraHandler!!.isRecording) {
+                mCameraHandler!!.startRecording()
+                toastUser("Started Recording")
+            } else {
+                mCameraHandler!!.stopRecording()
+                toastUser("Stopped Recording")
+            }
         }
     }
 

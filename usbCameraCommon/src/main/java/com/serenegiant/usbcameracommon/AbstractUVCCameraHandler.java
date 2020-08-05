@@ -87,6 +87,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 	private static final int MSG_CAPTURE_STOP = 6;
 	private static final int MSG_MEDIA_UPDATE = 7;
 	private static final int MSG_RELEASE = 9;
+	private static final int MSG_RESIZE = 10;
 
 	private final WeakReference<AbstractUVCCameraHandler.CameraThread> mWeakThread;
 	private volatile boolean mReleased;
@@ -157,7 +158,12 @@ abstract class AbstractUVCCameraHandler extends Handler {
 
 	public void resize(final int width, final int height) {
 		checkReleased();
-		throw new UnsupportedOperationException("does not support now");
+
+		CameraThread.Dimensions dimen = new CameraThread.Dimensions();
+		dimen.width = width;
+		dimen.height = height;
+
+		sendMessage(obtainMessage(MSG_RESIZE, dimen));
 	}
 
 	protected void startPreview(final Object surface) {
@@ -323,6 +329,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		case MSG_RELEASE:
 			thread.handleRelease();
 			break;
+		case MSG_RESIZE:
+			thread.handleResize((CameraThread.Dimensions)msg.obj);
+			break;
 		default:
 			throw new RuntimeException("unsupported message:what=" + msg.what);
 		}
@@ -382,6 +391,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			mWeakParent = new WeakReference<Activity>(parent);
 			mWeakCameraView = new WeakReference<CameraViewInterface>(cameraView);
 			loadShutterSound(parent);
+		}
+
+		static public class Dimensions{
+			int width;
+			int height;
 		}
 
 		@Override
@@ -600,6 +614,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
 				// you should not wait here
 				callOnStopRecording();
 			}
+		}
+
+		public void handleResize(CameraThread.Dimensions dimen) {
+			mWidth = dimen.width;
+			mHeight = dimen.height;
 		}
 
 		private final IFrameCallback mIFrameCallback = new IFrameCallback() {

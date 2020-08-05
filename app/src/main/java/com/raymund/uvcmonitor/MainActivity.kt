@@ -93,8 +93,16 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
     }
 
-    private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {s
-        CameraDialog.showDialog(this@MainActivity)
+    private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {
+        if (!mCameraHandler!!.isPreviewing) {
+            CameraDialog.showDialog(this@MainActivity)
+        } else {
+            // TODO: This is test code. Need to move this in the proper location once
+            // functionality is fully hashed out.
+            mCameraHandler!!.stopPreview()
+            mCameraHandler!!.resize(1280, 720)
+            mCameraHandler!!.startPreview(Surface(mCameraView!!.surfaceTexture))
+        }
     }
 
     private val mRecordOnClickListener: View.OnClickListener = View.OnClickListener {

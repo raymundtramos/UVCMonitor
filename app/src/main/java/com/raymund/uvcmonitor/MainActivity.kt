@@ -14,7 +14,8 @@ import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.USBMonitor.OnDeviceConnectListener
 import com.serenegiant.usb.USBMonitor.UsbControlBlock
 import com.serenegiant.usb.UVCCamera
-import com.serenegiant.usbcameracommon.UVCCameraHandler
+import com.serenegiant.usbcameracommon.UVCCameraHandlerMultiSurface
+import com.serenegiant.widget.CameraViewInterface
 import com.serenegiant.widget.UVCCameraTextureView
 
 class MainActivity : BaseActivity(), CameraDialogParent {
@@ -22,7 +23,8 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private var mCameraView: UVCCameraTextureView? = null
     private var mCameraButton: ImageButton? = null
     private var mRecordButton: ImageButton? = null
-    private var mCameraHandler: UVCCameraHandler? = null
+    private var mCameraHandler: UVCCameraHandlerMultiSurface? = null
+    private var mPreviewSurfaceId: Int? = null
 
     // TODO: Need to find a way to dynamically change this
     private val mMediaWidth = UVCCamera.DEFAULT_PREVIEW_WIDTH
@@ -43,12 +45,13 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         mRecordButton!!.setOnClickListener(mRecordOnClickListener)
 
         mCameraView = findViewById(R.id.camera_texture_view)
-        mCameraView!!.aspectRatio = (mMediaWidth / mMediaHeight.toDouble())
+        mCameraView!!.setAspectRatio(mMediaWidth, mMediaHeight)
+        mCameraView!!.setCallback(mCameraViewCallback)
 
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
 
         mCameraHandler =
-            UVCCameraHandler.createHandler(
+            UVCCameraHandlerMultiSurface.createHandler(
                 this,
                 mCameraView,
                 0,
@@ -93,15 +96,49 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
     }
 
+    private fun startPreview() {
+        if (mPreviewSurfaceId != null) {
+            mCameraHandler!!.removeSurface(mPreviewSurfaceId!!)
+        }
+
+        val surface = Surface(mCameraView!!.surfaceTexture)
+
+        if (surface != null) {
+            mPreviewSurfaceId = surface.hashCode()
+            mCameraHandler!!.addSurface(mPreviewSurfaceId!!, surface, true)
+        }
+        mCameraHandler!!.startPreview()
+    }
+
+    private val mCameraViewCallback: CameraViewInterface.Callback =
+        object : CameraViewInterface.Callback {
+            override fun onSurfaceCreated(view: CameraViewInterface?, surface: Surface?) {
+            }
+
+            override fun onSurfaceChanged(
+                view: CameraViewInterface?,
+                surface: Surface?,
+                width: Int,
+                height: Int
+            ) {
+                if (mCameraHandler!!.isPreviewing) {
+                    mCameraHandler!!.stopPreview()
+                    mCameraHandler!!.resize(1280, 720)
+                    startPreview()
+                }
+            }
+
+            override fun onSurfaceDestroy(view: CameraViewInterface?, surface: Surface?) {
+            }
+        }
+
     private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {
         if (!mCameraHandler!!.isPreviewing) {
             CameraDialog.showDialog(this@MainActivity)
         } else {
             // TODO: This is test code. Need to move this in the proper location once
             // functionality is fully hashed out.
-            mCameraHandler!!.stopPreview()
-            mCameraHandler!!.resize(1280, 720)
-            mCameraHandler!!.startPreview(Surface(mCameraView!!.surfaceTexture))
+            mCameraView!!.setAspectRatio(1280, 720)
         }
     }
 
@@ -129,7 +166,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 createNew: Boolean
             ) {
                 mCameraHandler!!.open(ctrlBlock)
-                mCameraHandler!!.startPreview(Surface(mCameraView!!.surfaceTexture))
+                startPreview()
             }
 
             override fun onDisconnect(

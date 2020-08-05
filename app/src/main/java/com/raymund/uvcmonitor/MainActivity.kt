@@ -133,13 +133,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         }
 
     private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {
-        if (!mCameraHandler!!.isPreviewing) {
-            CameraDialog.showDialog(this@MainActivity)
-        } else {
-            // TODO: This is test code. Need to move this in the proper location once
-            // functionality is fully hashed out.
-            mCameraView!!.setAspectRatio(1280, 720)
-        }
+        CameraDialog.showDialog(this@MainActivity)
     }
 
     private val mRecordOnClickListener: View.OnClickListener = View.OnClickListener {
@@ -165,6 +159,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 ctrlBlock: UsbControlBlock,
                 createNew: Boolean
             ) {
+                if (mCameraHandler!!.isOpened) {
+                    mCameraHandler!!.close()
+                }
                 mCameraHandler!!.open(ctrlBlock)
                 startPreview()
             }

@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
+import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.Toast
 import com.raymund.recorder.CameraEncoder
@@ -51,6 +52,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
         mCameraButton = findViewById(R.id.camera_button)
         mCameraButton!!.setOnClickListener(mDeviceOnClickListener)
         mRecordButton = findViewById(R.id.record_button)

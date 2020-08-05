@@ -1,3 +1,4 @@
+include ':usbCameraCommon'
 include ':libuvccamera'
 include ':app'
 rootProject.name = "UVC Monitor"

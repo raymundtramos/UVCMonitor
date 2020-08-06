@@ -155,7 +155,8 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     private val mSettingsOnClickListener: View.OnClickListener = View.OnClickListener {
-        var intent: Intent = Intent(this, SettingsActivity::class.java)
+        val intent: Intent = Intent(this, SettingsActivity::class.java)
+        intent.putExtra("SupportedSizeList", mCameraHandler!!.supportedSizeList)
         startActivity(intent)
     }
 

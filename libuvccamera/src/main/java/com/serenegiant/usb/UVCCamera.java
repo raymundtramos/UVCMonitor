@@ -271,6 +271,10 @@ public class UVCCamera {
     	return !TextUtils.isEmpty(mSupportedSize) ? mSupportedSize : (mSupportedSize = nativeGetSupportedSize(mNativePtr));
     }
 
+    public synchronized UVCSize getSupportedSizeList() {
+		return mCurrentSizeList;
+	}
+
 	/**
 	 * Set preview size and preview mode
 	 * @param width

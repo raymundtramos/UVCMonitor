@@ -49,6 +49,7 @@ import com.serenegiant.encoder.MediaVideoEncoder;
 import com.serenegiant.usb.IFrameCallback;
 import com.serenegiant.usb.USBMonitor;
 import com.serenegiant.usb.UVCCamera;
+import com.serenegiant.usb.UVCSize;
 import com.serenegiant.widget.CameraViewInterface;
 
 import java.io.BufferedOutputStream;
@@ -104,6 +105,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
 	public int getHeight() {
 		final CameraThread thread = mWeakThread.get();
 		return thread != null ? thread.getHeight() : 0;
+	}
+
+	public UVCSize getSupportedSizeList() {
+		final CameraThread thread = mWeakThread.get();
+		return thread.getSupportedSizeList();
 	}
 
 	public boolean isOpened() {
@@ -426,6 +432,10 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			synchronized (mSync) {
 				return mHeight;
 			}
+		}
+
+		public UVCSize getSupportedSizeList() {
+			return mUVCCamera.getSupportedSizeList();
 		}
 
 		public boolean isCameraOpened() {

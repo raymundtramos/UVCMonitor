@@ -1,5 +1,7 @@
 package com.serenegiant.usb;
 
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.text.TextUtils;
 
 import org.json.JSONArray;
@@ -7,8 +9,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 
-public class UVCSize {
-    public static class Frame {
+public class UVCSize implements Parcelable {
+    public static class Frame implements Parcelable {
         private int bDescriptorSubtype;
         private int wWidth;
         private int wHeight;
@@ -37,6 +39,30 @@ public class UVCSize {
             dwMaxFrameInterval = _dwMaxFrameInterval;
             dwFrameIntervalStep = _dwFrameIntervalStep;
         }
+
+        public Frame(Parcel parcel) {
+            bDescriptorSubtype = parcel.readInt();
+            wWidth = parcel.readInt();
+            wHeight = parcel.readInt();
+            dwDefaultFrameInterval = parcel.readInt();
+            bFrameIntervalType = parcel.readInt();
+            dwMinFrameInterval = parcel.readInt();
+            dwMaxFrameInterval = parcel.readInt();
+            dwFrameIntervalStep = parcel.readInt();
+            intervals = parcel.readArrayList(Integer.class.getClassLoader());
+        }
+
+        public static final Creator<Frame> CREATOR = new Creator<Frame>() {
+            @Override
+            public Frame createFromParcel(Parcel in) {
+                return new Frame(in);
+            }
+
+            @Override
+            public Frame[] newArray(int size) {
+                return new Frame[size];
+            }
+        };
 
         public int getDescriptorSubtype() {
             return bDescriptorSubtype;
@@ -92,9 +118,27 @@ public class UVCSize {
                     ", intervals=" + intervals +
                     '}';
         }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeInt(bDescriptorSubtype);
+            dest.writeInt(wWidth);
+            dest.writeInt(wHeight);
+            dest.writeInt(dwDefaultFrameInterval);
+            dest.writeInt(bFrameIntervalType);
+            dest.writeInt(dwMinFrameInterval);
+            dest.writeInt(dwMaxFrameInterval);
+            dest.writeInt(dwFrameIntervalStep);
+            dest.writeArray(intervals.toArray());
+        }
     }
 
-    public static class Format {
+    public static class Format implements Parcelable {
         private int bDescriptorSubtype;
         private int bFormatIndex;
         private int bDefaultFrameIndex;
@@ -105,6 +149,25 @@ public class UVCSize {
             bFormatIndex = _bFormatIndex;
             bDefaultFrameIndex = _bDefaultFrameIndex;
         }
+
+        public Format(Parcel parcel) {
+            bDescriptorSubtype = parcel.readInt();
+            bFormatIndex = parcel.readInt();
+            bDefaultFrameIndex = parcel.readInt();
+            frameDescs = parcel.readArrayList(Frame.class.getClassLoader());
+        }
+
+        public static final Creator<Format> CREATOR = new Creator<Format>() {
+            @Override
+            public Format createFromParcel(Parcel in) {
+                return new Format(in);
+            }
+
+            @Override
+            public Format[] newArray(int size) {
+                return new Format[size];
+            }
+        };
 
         public int getDescriptorSubtype() {
             return bDescriptorSubtype;
@@ -135,6 +198,19 @@ public class UVCSize {
                     ", frameDescs=" + frameDescs +
                     '}';
         }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeInt(bDescriptorSubtype);
+            dest.writeInt(bFormatIndex);
+            dest.writeInt(bDefaultFrameIndex);
+            dest.writeArray(frameDescs.toArray());
+        }
     }
 
     private ArrayList<Format> mFormats;
@@ -152,6 +228,18 @@ public class UVCSize {
             }
         }
     }
+
+    public static final Creator<UVCSize> CREATOR = new Creator<UVCSize>() {
+        @Override
+        public UVCSize createFromParcel(Parcel in) {
+            return new UVCSize(in);
+        }
+
+        @Override
+        public UVCSize[] newArray(int size) {
+            return new UVCSize[size];
+        }
+    };
 
     private ArrayList<Format> parseFormat(JSONArray formats) {
         ArrayList<Format> result = new ArrayList<Format>();
@@ -208,6 +296,10 @@ public class UVCSize {
         return result;
     }
 
+    public UVCSize(Parcel parcel) {
+        mFormats = parcel.readArrayList(Format.class.getClassLoader());
+    }
+
     public Format getFormat(int index) {
         if (index < mFormats.size()) {
             return mFormats.get(index);
@@ -221,5 +313,15 @@ public class UVCSize {
         return "UVCSize{" +
                 "mFormats=" + mFormats +
                 '}';
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeArray(mFormats.toArray());
     }
 }

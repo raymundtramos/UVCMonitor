@@ -23,13 +23,6 @@
 
 package com.serenegiant.usb;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.graphics.SurfaceTexture;
 import android.hardware.usb.UsbDevice;
 import android.text.TextUtils;
@@ -131,7 +124,7 @@ public class UVCCamera {
 	protected int mCurrentWidth = DEFAULT_PREVIEW_WIDTH, mCurrentHeight = DEFAULT_PREVIEW_HEIGHT;
 	protected float mCurrentBandwidthFactor = DEFAULT_BANDWIDTH;
     protected String mSupportedSize;
-    protected List<Size> mCurrentSizeList;
+    protected UVCSize mCurrentSizeList;
 	// these fields from here are accessed from native code and do not change name and remove
     protected long mNativePtr;
     protected int mScanningModeMin, mScanningModeMax, mScanningModeDef;
@@ -173,9 +166,10 @@ public class UVCCamera {
     protected int mAnalogVideoLockStateMin, mAnalogVideoLockStateMax, mAnalogVideoLockStateDef;
     // until here
     /**
-     * the sonctructor of this class should be call within the thread that has a looper
+     * the constructor of this class should be call within the thread that has a looper
      * (UI thread or a thread that called Looper.prepare)
      */
+
     public UVCCamera() {
     	mNativePtr = nativeCreate();
     	mSupportedSize = null;
@@ -205,9 +199,19 @@ public class UVCCamera {
 		}
     	if (mNativePtr != 0 && TextUtils.isEmpty(mSupportedSize)) {
     		mSupportedSize = nativeGetSupportedSize(mNativePtr);
+    		mCurrentSizeList = new UVCSize(mSupportedSize);
     	}
-		nativeSetPreviewSize(mNativePtr, DEFAULT_PREVIEW_WIDTH, DEFAULT_PREVIEW_HEIGHT,
-			DEFAULT_PREVIEW_MIN_FPS, DEFAULT_PREVIEW_MAX_FPS, DEFAULT_PREVIEW_MODE, DEFAULT_BANDWIDTH);
+
+		UVCSize.Format format = mCurrentSizeList.getFormat(0);
+    	UVCSize.Frame frame = format.getFrame(format.getDefaultFrameIndex());
+		nativeSetPreviewSize(
+				mNativePtr,
+				frame.getWidth(),
+				frame.getHeight(),
+				DEFAULT_PREVIEW_MIN_FPS,
+				frame.getDefaultFrameInterval(),
+				format.getDescriptorSubtype(),
+				DEFAULT_BANDWIDTH);
     }
 
 	/**
@@ -267,19 +271,6 @@ public class UVCCamera {
     	return !TextUtils.isEmpty(mSupportedSize) ? mSupportedSize : (mSupportedSize = nativeGetSupportedSize(mNativePtr));
     }
 
-	public Size getPreviewSize() {
-		Size result = null;
-		final List<Size> list = getSupportedSizeList();
-		for (final Size sz: list) {
-			if ((sz.width == mCurrentWidth)
-				|| (sz.height == mCurrentHeight)) {
-				result =sz;
-				break;
-			}
-		}
-		return result;
-	}
-	
 	/**
 	 * Set preview size and preview mode
 	 * @param width
@@ -330,46 +321,6 @@ public class UVCCamera {
 			mCurrentWidth = width;
 			mCurrentHeight = height;
 			mCurrentBandwidthFactor = bandwidthFactor;
-		}
-	}
-
-	public List<Size> getSupportedSizeList() {
-		final int type = (mCurrentFrameFormat > 0) ? 6 : 4;
-		return getSupportedSize(type, mSupportedSize);
-	}
-
-	public static List<Size> getSupportedSize(final int type, final String supportedSize) {
-		final List<Size> result = new ArrayList<Size>();
-		if (!TextUtils.isEmpty(supportedSize))
-		try {
-			final JSONObject json = new JSONObject(supportedSize);
-			final JSONArray formats = json.getJSONArray("formats");
-			final int format_nums = formats.length();
-			for (int i = 0; i < format_nums; i++) {
-				final JSONObject format = formats.getJSONObject(i);
-				if(format.has("type") && format.has("size")) {
-					final int format_type = format.getInt("type");
-					if ((format_type == type) || (type == -1)) {
-						addSize(format, format_type, 0, result);
-					}
-				}
-			}
-		} catch (final JSONException e) {
-			e.printStackTrace();
-		}
-		return result;
-	}
-
-	private static final void addSize(final JSONObject format, final int formatType, final int frameType, final List<Size> size_list) throws JSONException {
-		final JSONArray size = format.getJSONArray("size");
-		final int size_nums = size.length();
-		for (int j = 0; j < size_nums; j++) {
-			final String[] sz = size.getString(j).split("x");
-			try {
-				size_list.add(new Size(formatType, frameType, j, Integer.parseInt(sz[0]), Integer.parseInt(sz[1])));
-			} catch (final Exception e) {
-				break;
-			}
 		}
 	}
 

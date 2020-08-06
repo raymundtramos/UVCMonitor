@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">UVC Monitor</string>
+    <!-- Preference Titles -->
+    <string name="header_preview">Preview Settings</string>
+    <string name="header_record">Record Settings</string>
+    <!-- Preference Titles -->
+    <string name="switch_preview_type">Format Type</string>
+    <string name="switch_preview_resolution">Resolution</string>
+    <string name="switch_preview_framerate">Framerate</string>
+    <string name="title_activity_settings">SettingsActivity</string>
 </resources>

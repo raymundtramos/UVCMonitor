@@ -30,9 +30,18 @@
             android:layout_width="@dimen/button_size"
             android:layout_height="@dimen/button_size"
             android:layout_toEndOf="@id/camera_button"
-            android:contentDescription="@string/camera"
+            android:contentDescription="Record"
             android:scaleType="centerCrop"
             android:src="@android:drawable/ic_media_play" />
+
+        <ImageButton
+            android:id="@+id/settings_button"
+            android:layout_width="@dimen/button_size"
+            android:layout_height="@dimen/button_size"
+            android:layout_toEndOf="@id/record_button"
+            android:contentDescription="Settings"
+            android:scaleType="centerCrop"
+            android:src="@android:drawable/ic_menu_more" />
     </RelativeLayout>
 
 </FrameLayout>

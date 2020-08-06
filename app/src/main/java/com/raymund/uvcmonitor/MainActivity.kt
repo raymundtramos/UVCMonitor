@@ -1,5 +1,6 @@
 package com.raymund.uvcmonitor
 
+import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
 import android.view.Surface
@@ -23,6 +24,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private var mCameraView: UVCCameraTextureView? = null
     private var mCameraButton: ImageButton? = null
     private var mRecordButton: ImageButton? = null
+    private var mSettingsButton: ImageButton? = null
     private var mCameraHandler: UVCCameraHandlerMultiSurface? = null
     private var mPreviewSurfaceId: Int? = null
 
@@ -43,6 +45,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
         mRecordButton = findViewById(R.id.record_button)
         mRecordButton!!.setOnClickListener(mRecordOnClickListener)
+
+        mSettingsButton = findViewById(R.id.settings_button)
+        mSettingsButton!!.setOnClickListener(mSettingsOnClickListener)
 
         mCameraView = findViewById(R.id.camera_texture_view)
         mCameraView!!.setAspectRatio(mMediaWidth, mMediaHeight)
@@ -89,6 +94,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         mCameraView = null;
         mCameraButton = null;
         mRecordButton = null;
+        mSettingsButton = null;
         super.onDestroy()
     }
 
@@ -146,6 +152,11 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 toastUser("Stopped Recording")
             }
         }
+    }
+
+    private val mSettingsOnClickListener: View.OnClickListener = View.OnClickListener {
+        var intent: Intent = Intent(this, SettingsActivity::class.java)
+        startActivity(intent)
     }
 
     private val mOnDeviceConnectListener: OnDeviceConnectListener =

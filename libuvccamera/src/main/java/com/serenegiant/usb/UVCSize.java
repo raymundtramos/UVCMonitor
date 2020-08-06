@@ -10,6 +10,9 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 public class UVCSize implements Parcelable {
+    private static final int FORMAT_TYPE_YUV = 4;
+    private static final int FORMAT_TYPE_MJPEG = 6;
+
     public static class Frame implements Parcelable {
         private int bDescriptorSubtype;
         private int wWidth;
@@ -104,6 +107,17 @@ public class UVCSize implements Parcelable {
             }
         }
 
+        public CharSequence[] getIntervalCharSeq() {
+            int size = intervals.size();
+            CharSequence[] result = new CharSequence[size];
+
+            for (int i = 0; i < size; i++) {
+                result[i] = intervals.get(i).toString();
+            }
+
+            return result;
+        }
+
         @Override
         public String toString() {
             return "Frame{" +
@@ -187,6 +201,18 @@ public class UVCSize implements Parcelable {
             } else {
                 throw new IndexOutOfBoundsException();
             }
+        }
+
+        public CharSequence[] getFrameResCharSeq() {
+            int size = frameDescs.size();
+            CharSequence[] result = new CharSequence[size];
+
+            for (int i = 0; i < size; i++) {
+                Frame frame = frameDescs.get(i);
+                result[i] = frame.getWidth() + "x" + frame.getHeight();
+            }
+
+            return result;
         }
 
         @Override
@@ -306,6 +332,27 @@ public class UVCSize implements Parcelable {
         } else {
             throw new IndexOutOfBoundsException();
         }
+    }
+
+    public CharSequence[] getFormatCharSeq() {
+        int size = mFormats.size();
+        CharSequence[] result = new CharSequence[size];
+
+        for (int i = 0; i < size; i++) {
+            switch (mFormats.get(i).getDescriptorSubtype()) {
+                case FORMAT_TYPE_YUV:
+                    result[i] = "YUV";
+                    break;
+                case FORMAT_TYPE_MJPEG:
+                    result[i] = "MJPEG";
+                    break;
+                default:
+                    result[i] = "Undefined";
+                    break;
+            }
+        }
+
+        return result;
     }
 
     @Override

@@ -210,7 +210,7 @@ public class UVCCamera {
 				frame.getHeight(),
 				DEFAULT_PREVIEW_MIN_FPS,
 				frame.getDefaultFrameInterval(),
-				format.getDescriptorSubtype(),
+				format.getFrameFormat(),
 				DEFAULT_BANDWIDTH);
     }
 

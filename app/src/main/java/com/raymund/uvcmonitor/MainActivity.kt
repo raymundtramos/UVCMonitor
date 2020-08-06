@@ -28,10 +28,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private var mCameraHandler: UVCCameraHandlerMultiSurface? = null
     private var mPreviewSurfaceId: Int? = null
 
-    // TODO: Need to find a way to dynamically change this
-    private val mMediaWidth = UVCCamera.DEFAULT_PREVIEW_WIDTH
-    private val mMediaHeight = UVCCamera.DEFAULT_PREVIEW_HEIGHT
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -50,7 +46,10 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         mSettingsButton!!.setOnClickListener(mSettingsOnClickListener)
 
         mCameraView = findViewById(R.id.camera_texture_view)
-        mCameraView!!.setAspectRatio(mMediaWidth, mMediaHeight)
+        mCameraView!!.setAspectRatio(
+            UVCCamera.DEFAULT_PREVIEW_WIDTH,
+            UVCCamera.DEFAULT_PREVIEW_HEIGHT
+        )
         mCameraView!!.setCallback(mCameraViewCallback)
 
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
@@ -60,9 +59,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 this,
                 mCameraView,
                 0,
-                mMediaWidth,
-                mMediaHeight,
-                UVCCamera.FRAME_FORMAT_YUYV
+                UVCCamera.DEFAULT_PREVIEW_WIDTH,
+                UVCCamera.DEFAULT_PREVIEW_HEIGHT,
+                UVCCamera.DEFAULT_PREVIEW_MODE
             )
     }
 

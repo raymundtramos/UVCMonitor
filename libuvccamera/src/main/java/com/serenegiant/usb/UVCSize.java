@@ -10,8 +10,8 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 public class UVCSize implements Parcelable {
-    private static final int FORMAT_TYPE_YUV = 4;
-    private static final int FORMAT_TYPE_MJPEG = 6;
+    private static final int FORMAT_DESC_TYPE_UNCOMPRESSED = 4;
+    private static final int FORMAT_DESC_TYPE_MJPEG = 6;
 
     public static class Frame implements Parcelable {
         private int bDescriptorSubtype;
@@ -187,6 +187,17 @@ public class UVCSize implements Parcelable {
             return bDescriptorSubtype;
         }
 
+        public int getFrameFormat() {
+            switch (bDescriptorSubtype) {
+                case FORMAT_DESC_TYPE_UNCOMPRESSED:
+                    return UVCCamera.FRAME_FORMAT_YUYV;
+                case FORMAT_DESC_TYPE_MJPEG:
+                    return UVCCamera.FRAME_FORMAT_MJPEG;
+                default:
+                    return UVCCamera.DEFAULT_PREVIEW_MODE;
+            }
+        }
+
         public int getFormatIndex() {
             return bFormatIndex;
         }
@@ -340,10 +351,10 @@ public class UVCSize implements Parcelable {
 
         for (int i = 0; i < size; i++) {
             switch (mFormats.get(i).getDescriptorSubtype()) {
-                case FORMAT_TYPE_YUV:
-                    result[i] = "YUV";
+                case FORMAT_DESC_TYPE_UNCOMPRESSED:
+                    result[i] = "YUYV";
                     break;
-                case FORMAT_TYPE_MJPEG:
+                case FORMAT_DESC_TYPE_MJPEG:
                     result[i] = "MJPEG";
                     break;
                 default:

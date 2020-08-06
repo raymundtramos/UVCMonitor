@@ -8,12 +8,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class UVCSize implements Parcelable {
     private static final int FORMAT_DESC_TYPE_UNCOMPRESSED = 4;
     private static final int FORMAT_DESC_TYPE_MJPEG = 6;
 
-    public static class Frame implements Parcelable {
+    public static class Frame implements Parcelable, Comparable {
         private int bDescriptorSubtype;
         private int wWidth;
         private int wHeight;
@@ -150,9 +152,20 @@ public class UVCSize implements Parcelable {
             dest.writeInt(dwFrameIntervalStep);
             dest.writeArray(intervals.toArray());
         }
+
+        @Override
+        public int compareTo(Object o) {
+            int result = Integer.compare(wWidth, ((Frame) o).wWidth);
+
+            if (result == 0) {
+                return Integer.compare(wHeight, ((Frame) o).wHeight);
+            } else {
+                return result;
+            }
+        }
     }
 
-    public static class Format implements Parcelable {
+    public static class Format implements Parcelable, Comparable {
         private int bDescriptorSubtype;
         private int bFormatIndex;
         private int bDefaultFrameIndex;
@@ -248,6 +261,11 @@ public class UVCSize implements Parcelable {
             dest.writeInt(bDefaultFrameIndex);
             dest.writeArray(frameDescs.toArray());
         }
+
+        @Override
+        public int compareTo(Object o) {
+            return (Integer.compare(bFormatIndex, ((Format) o).bFormatIndex));
+        }
     }
 
     private ArrayList<Format> mFormats;
@@ -291,6 +309,7 @@ public class UVCSize implements Parcelable {
                         jsonFormat.getInt("bDefaultFrameIndex")
                 );
                 format.frameDescs = new ArrayList<Frame>(parseFrame(jsonFrames));
+                Collections.sort(format.frameDescs);
                 result.add(format);
             }
         } catch (Exception e) {
@@ -323,6 +342,7 @@ public class UVCSize implements Parcelable {
                     for (int j = 0; j < frame.bFrameIntervalType; j++) {
                         frame.intervals.add(jsonIntervals.getInt(j));
                     }
+                    Collections.sort(frame.intervals);
                 }
                 result.add(frame);
             }

@@ -1,7 +1,6 @@
 package com.raymund.uvcmonitor
 
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.DropDownPreference
 import androidx.preference.PreferenceCategory
@@ -38,9 +37,9 @@ class SettingsActivity : AppCompatActivity() {
             val categoryPreview = PreferenceCategory(context).apply {
                 title = "Preview Settings"
             }
-            val previewFormatType = DropDownPreference(context).apply {
-                key = "preview_format_type"
-                title = "Format Type"
+            val previewFrameFormat = DropDownPreference(context).apply {
+                key = "preview_frame_format"
+                title = "Frame Format"
                 entries = mSupportedSizeList!!.formatCharSeq
                 entryValues =  mSupportedSizeList!!.formatCharSeq
                 summary = mSupportedSizeList!!.formatCharSeq[0]
@@ -65,7 +64,7 @@ class SettingsActivity : AppCompatActivity() {
             }
 
             screen.addPreference(categoryPreview)
-            screen.addPreference(previewFormatType)
+            screen.addPreference(previewFrameFormat)
             screen.addPreference(previewResolution)
             screen.addPreference(previewFramerate)
             screen.addPreference(categoryRecord)

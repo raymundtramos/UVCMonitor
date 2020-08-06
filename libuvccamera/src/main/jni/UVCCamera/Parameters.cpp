@@ -379,6 +379,9 @@ char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle) {
                                 write(writer, "wWidth", frame_desc->wWidth);
                                 write(writer, "wHeight", frame_desc->wHeight);
                                 write(writer, "bFrameIntervalType", intervalType);
+                                write(writer, "dwMinFrameInterval", frame_desc->dwMinFrameInterval);
+                                write(writer, "dwMaxFrameInterval", frame_desc->dwMaxFrameInterval);
+                                write(writer, "dwFrameIntervalStep", frame_desc->dwFrameIntervalStep);
 
                                 if (intervalType)
                                 {
@@ -389,12 +392,6 @@ char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle) {
                                         writer.Uint(CONVERT_TO_FPS(frame_desc->intervals[i]));
                                     }
                                     writer.EndArray();
-                                }
-                                else
-                                {
-                                    write(writer, "dwMinFrameInterval", frame_desc->dwMinFrameInterval);
-                                    write(writer, "dwMaxFrameInterval", frame_desc->dwMaxFrameInterval);
-                                    write(writer, "dwFrameIntervalStep", frame_desc->dwFrameIntervalStep);
                                 }
 
 							    writer.EndObject();

@@ -127,6 +127,8 @@ static const char *_uvc_name_for_format_subtype(uint8_t subtype) {
 #define FRAME_INTERVAL_MAX			"maxFrameInterval"
 #define FRAME_INTERVAL_STEP			"frameIntervalStep"
 
+#define CONVERT_TO_FPS(x)           (x > 0) ? (10000000/x) : 0
+
 static void writerFormat(Writer<StringBuffer> &writer, uvc_format_desc_t *fmt_desc) {
 	uvc_frame_desc_t *frame_desc;
 	char work[256];
@@ -342,7 +344,6 @@ char *UVCDiags::getCurrentStream(const uvc_stream_ctrl_t *ctrl) {
 char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle) {
 	StringBuffer buffer;
 	Writer<StringBuffer> writer(buffer);
-	char buf[256];
 
 	ENTER();
 	writer.StartObject();
@@ -372,9 +373,31 @@ char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle) {
 							writer.StartArray();
 							DL_FOREACH(fmt_desc->frame_descs, frame_desc)
 							{
-								snprintf(buf, sizeof(buf), "%dx%d", frame_desc->wWidth, frame_desc->wHeight);
-								buf[sizeof(buf)-1] = '\0';
-								writer.String(buf);
+							    uint8_t intervalType = frame_desc->bFrameIntervalType;
+
+							    writer.StartObject();
+                                write(writer, "wWidth", frame_desc->wWidth);
+                                write(writer, "wHeight", frame_desc->wHeight);
+                                write(writer, "bFrameIntervalType", intervalType);
+
+                                if (intervalType)
+                                {
+                                    writer.String("framerates");
+                                    writer.StartArray();
+                                    for (uint8_t i = 0; i < intervalType; i++)
+                                    {
+                                        writer.Uint(CONVERT_TO_FPS(frame_desc->intervals[i]));
+                                    }
+                                    writer.EndArray();
+                                }
+                                else
+                                {
+                                    write(writer, "dwMinFrameInterval", frame_desc->dwMinFrameInterval);
+                                    write(writer, "dwMaxFrameInterval", frame_desc->dwMaxFrameInterval);
+                                    write(writer, "dwFrameIntervalStep", frame_desc->dwFrameIntervalStep);
+                                }
+
+							    writer.EndObject();
 							}
 							writer.EndArray();
 							break;

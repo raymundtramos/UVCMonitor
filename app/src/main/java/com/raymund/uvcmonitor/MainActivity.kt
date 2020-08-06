@@ -190,11 +190,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     // Override of CameraDialogParent.onDialogResult
     override fun onDialogResult(canceled: Boolean) {
-        if (canceled) {
-            runOnUiThread({
-                // TODO: Add layout updates here
-            }, 0)
-        }
     }
 
     private fun startCapture() {

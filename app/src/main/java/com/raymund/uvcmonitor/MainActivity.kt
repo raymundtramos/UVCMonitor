@@ -111,19 +111,27 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == REQ_CODE_SETTINGS) {
-            val id = mCameraHandler!!.venProId
-            val sharedPrefs = getSharedPreferences(id, Context.MODE_PRIVATE)
-            val gson = Gson()
-            val json: String = sharedPrefs.getString(id, "")
-            mCameraPrefs = gson.fromJson(json, UVCCameraPrefs::class.java)
-
-            mCameraView!!.setAspectRatio(mCameraPrefs!!.width, mCameraPrefs!!.height)
-            mCameraHandler!!.updateCameraParams(mCameraPrefs)
+            loadCameraPrefs(mCameraHandler!!.venProId)
         }
     }
 
     private fun toastUser(msg: String) {
         Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun loadCameraPrefs(id: String) {
+        Log.i("RAYMUNDTEST_PREF", id)
+        val sharedPrefs = getSharedPreferences(id, Context.MODE_PRIVATE)
+        val gson = Gson()
+        val json: String = sharedPrefs.getString(id, "")
+
+        if (json.isNotEmpty()) {
+            mCameraPrefs = gson.fromJson(json, UVCCameraPrefs::class.java)
+            mCameraView!!.setAspectRatio(mCameraPrefs!!.width, mCameraPrefs!!.height)
+            mCameraHandler!!.updateCameraPrefs(mCameraPrefs)
+        } else {
+            toastUser("No camera preferences found")
+        }
     }
 
     private fun startPreview() {
@@ -201,11 +209,13 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 ctrlBlock: UsbControlBlock,
                 createNew: Boolean
             ) {
-                if (mCameraHandler!!.isOpened) {
-                    mCameraHandler!!.close()
-                }
-                mCameraHandler!!.open(ctrlBlock)
-                startPreview()
+                runOnUiThread(Runnable {
+                    val id = device.vendorId.toString() + "-" + device.productId.toString()
+                    loadCameraPrefs(id)
+                    mCameraHandler!!.open(ctrlBlock)
+                    startPreview()
+
+                })
             }
 
             override fun onDisconnect(
@@ -234,9 +244,4 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     override fun onDialogResult(canceled: Boolean) {
     }
 
-    private fun startCapture() {
-    }
-
-    private fun stopCapture() {
-    }
 }

@@ -62,7 +62,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -90,7 +89,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 	private static final int MSG_MEDIA_UPDATE = 7;
 	private static final int MSG_RELEASE = 9;
 	private static final int MSG_RESIZE = 10;
-	private static final int MSG_UPDATE_CAMERA_PARAMS = 11;
+	private static final int MSG_UPDATE_CAMERA_PREFS = 11;
 
 	private final WeakReference<AbstractUVCCameraHandler.CameraThread> mWeakThread;
 	private volatile boolean mReleased;
@@ -184,9 +183,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		sendMessage(obtainMessage(MSG_RESIZE, dimen));
 	}
 
-	public void updateCameraParams(UVCCameraPrefs prefs) {
+	public void updateCameraPrefs(UVCCameraPrefs prefs) {
 		checkReleased();
-		sendMessage(obtainMessage(MSG_UPDATE_CAMERA_PARAMS, prefs));
+		sendMessage(obtainMessage(MSG_UPDATE_CAMERA_PREFS, prefs));
 	}
 
 	protected void startPreview(final Object surface) {
@@ -355,8 +354,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		case MSG_RESIZE:
 			thread.handleResize((CameraThread.Dimensions)msg.obj);
 			break;
-		case MSG_UPDATE_CAMERA_PARAMS:
-			thread.handleUpdateCameraParams((UVCCameraPrefs)msg.obj);
+		case MSG_UPDATE_CAMERA_PREFS:
+			thread.handleUpdateCameraPrefs((UVCCameraPrefs)msg.obj);
 			break;
 		default:
 			throw new RuntimeException("unsupported message:what=" + msg.what);
@@ -416,7 +415,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			mHeight = height;
 			mPreviewMode = format;
 			mMinFps = UVCCamera.DEFAULT_PREVIEW_MIN_FPS;
-			mMaxFps = UVCCamera.DEFAULT_PREVIEW_MAX_FPS; //TODO: Need to pass in FPS value
+			mMaxFps = UVCCamera.DEFAULT_PREVIEW_MAX_FPS;
 			mBandwidthFactor = bandwidthFactor;
 			mWeakParent = new WeakReference<Activity>(parent);
 			mWeakCameraView = new WeakReference<CameraViewInterface>(cameraView);
@@ -665,15 +664,19 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		}
 
 		public void handleResize(CameraThread.Dimensions dimen) {
-			mWidth = dimen.width;
-			mHeight = dimen.height;
+			synchronized (mSync) {
+				mWidth = dimen.width;
+				mHeight = dimen.height;
+			}
 		}
 
-		public void handleUpdateCameraParams(UVCCameraPrefs prefs) {
-			mMaxFps = prefs.getFramerate();
-			mPreviewMode = prefs.getFrameFormat();
-			mWidth = prefs.getWidth();
-			mHeight = prefs.getHeight();
+		public void handleUpdateCameraPrefs(UVCCameraPrefs prefs) {
+			synchronized (mSync) {
+				mMaxFps = prefs.getFramerate();
+				mPreviewMode = prefs.getFrameFormat();
+				mWidth = prefs.getWidth();
+				mHeight = prefs.getHeight();
+			}
 		}
 
 		private final IFrameCallback mIFrameCallback = new IFrameCallback() {

@@ -137,8 +137,8 @@ public class UVCCameraHandlerMultiSurface extends AbstractUVCCameraHandler {
 		}
 	}
 
-	public synchronized void updateCameraParams(UVCCameraPrefs prefs) {
-		super.updateCameraParams(prefs);
+	public synchronized void updateCameraPrefs(UVCCameraPrefs prefs) {
+		super.updateCameraPrefs(prefs);
 		if (mRendererHolder != null) {
 			mRendererHolder.resize(prefs.getWidth(), prefs.getHeight());
 		}

@@ -228,6 +228,16 @@ public class UVCSize implements Parcelable {
             }
         }
 
+        public static int getFrameFormat(String frameFormat) {
+            if (frameFormat.equals(getTypeString(UVCCamera.FRAME_FORMAT_YUYV))) {
+                return UVCCamera.FRAME_FORMAT_YUYV;
+            } else if (frameFormat.equals(getTypeString(UVCCamera.FRAME_FORMAT_MJPEG))) {
+                return UVCCamera.FRAME_FORMAT_MJPEG;
+            } else {
+                return UVCCamera.DEFAULT_PREVIEW_MODE;
+            }
+        }
+
         public String getTypeString() {
             switch (bDescriptorSubtype) {
                 case FORMAT_DESC_TYPE_UNCOMPRESSED:
@@ -314,6 +324,7 @@ public class UVCSize implements Parcelable {
         public int compareTo(Object o) {
             return (Integer.compare(bFormatIndex, ((Format) o).bFormatIndex));
         }
+
     }
 
     private ArrayList<Format> mFormats;

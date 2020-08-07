@@ -1,13 +1,16 @@
 package com.raymund.uvcmonitor
 
+import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
+import android.util.Log
 import android.view.Surface
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.Toast
+import com.google.gson.Gson
 import com.serenegiant.common.BaseActivity
 import com.serenegiant.usb.CameraDialog
 import com.serenegiant.usb.CameraDialog.CameraDialogParent
@@ -15,11 +18,14 @@ import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.USBMonitor.OnDeviceConnectListener
 import com.serenegiant.usb.USBMonitor.UsbControlBlock
 import com.serenegiant.usb.UVCCamera
+import com.serenegiant.usb.UVCCameraPrefs
 import com.serenegiant.usbcameracommon.UVCCameraHandlerMultiSurface
 import com.serenegiant.widget.CameraViewInterface
 import com.serenegiant.widget.UVCCameraTextureView
 
 class MainActivity : BaseActivity(), CameraDialogParent {
+    private val REQ_CODE_SETTINGS = 1
+
     private var mUSBMonitor: USBMonitor? = null
     private var mCameraView: UVCCameraTextureView? = null
     private var mCameraButton: ImageButton? = null
@@ -27,6 +33,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     private var mSettingsButton: ImageButton? = null
     private var mCameraHandler: UVCCameraHandlerMultiSurface? = null
     private var mPreviewSurfaceId: Int? = null
+    private var mCameraPrefs: UVCCameraPrefs? = null;
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,6 +107,20 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         super.onDestroy()
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == REQ_CODE_SETTINGS) {
+            val id = mCameraHandler!!.venProId
+            val sharedPrefs = getSharedPreferences(id, Context.MODE_PRIVATE)
+            val gson = Gson()
+            val json: String = sharedPrefs.getString(id, "")
+            mCameraPrefs = gson.fromJson(json, UVCCameraPrefs::class.java)
+
+            mCameraView!!.setAspectRatio(mCameraPrefs!!.width, mCameraPrefs!!.height)
+        }
+    }
+
     private fun toastUser(msg: String) {
         Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
     }
@@ -131,7 +152,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             ) {
                 if (mCameraHandler!!.isPreviewing) {
                     mCameraHandler!!.stopPreview()
-                    mCameraHandler!!.resize(1280, 720)
+                    mCameraHandler!!.resize(mCameraPrefs!!.width, mCameraPrefs!!.height)
                     startPreview()
                 }
             }
@@ -161,7 +182,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             val intent: Intent = Intent(this, SettingsActivity::class.java)
             intent.putExtra("SupportedSizeList", mCameraHandler!!.supportedSizeList)
             intent.putExtra("CameraPreferences", mCameraHandler!!.cameraPrefs)
-            startActivity(intent)
+            startActivityForResult(intent, REQ_CODE_SETTINGS)
         } else {
             toastUser("No camera is selected. Cannot access settings.")
         }

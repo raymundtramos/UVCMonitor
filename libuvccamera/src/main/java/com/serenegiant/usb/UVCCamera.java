@@ -282,7 +282,7 @@ public class UVCCamera {
     	if(device != null) {
 			return new UVCCameraPrefs(
 					device.getVendorId(),
-					device.getDeviceId(),
+					device.getProductId(),
 					mCurrentFrameFormat,
 					mCurrentWidth,
 					mCurrentHeight,
@@ -291,6 +291,15 @@ public class UVCCamera {
 		}
     	else {
     		return null;
+		}
+	}
+
+	public synchronized String getVenProId() {
+		UsbDevice device = getDevice();
+		if(device != null) {
+			return (device.getVendorId() + "-" + device.getProductId());
+		}else {
+			return null;
 		}
 	}
 
@@ -312,7 +321,7 @@ public class UVCCamera {
 	public void setPreviewSize(final int width, final int height, final int frameFormat) {
 		setPreviewSize(width, height, mCurrentMinFps, mCurrentMaxFps, frameFormat, mCurrentBandwidthFactor);
 	}
-	
+
 	/**
 	 * Set preview size and preview mode
 	 * @param width

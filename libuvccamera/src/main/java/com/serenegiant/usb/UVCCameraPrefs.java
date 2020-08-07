@@ -34,13 +34,11 @@ public class UVCCameraPrefs implements Parcelable {
             String _resolution,
             String _framerate
     ) {
-        this.mVendorId = _vendorId;
-        this.mProductId = _productId;
-        this.mFrameFormat = _frameFormat;
-        String[] dimens = _resolution.split("x");
-        this.mWidth = Integer.parseInt(dimens[0]);
-        this.mHeight = Integer.parseInt(dimens[1]);
-        this.mFramerate = Integer.parseInt(_framerate);
+        mVendorId = _vendorId;
+        mProductId = _productId;
+        mFrameFormat = _frameFormat;
+        mFramerate = Integer.parseInt(_framerate);
+        setResolution(_resolution);
     }
 
     protected UVCCameraPrefs(Parcel in) {
@@ -50,6 +48,44 @@ public class UVCCameraPrefs implements Parcelable {
         mWidth = in.readInt();
         mHeight = in.readInt();
         mFramerate = in.readInt();
+    }
+
+    public void setVendorId(int vendorId) {
+        mVendorId = vendorId;
+    }
+
+    public void setProductId(int productId) {
+        mProductId = productId;
+    }
+
+    public void setFrameFormat(int frameformat) {
+        mFrameFormat = frameformat;
+    }
+
+    public void setFrameFormat(String frameFormat) {
+        mFrameFormat = UVCSize.Format.getFrameFormat(frameFormat);
+    }
+
+    public void setWidth(int width) {
+        mWidth = width;
+    }
+
+    public void setHeight(int height) {
+        mHeight = height;
+    }
+
+    public void setResolution(String resolution) {
+        String[] dimens = resolution.split("x");
+        mWidth = Integer.parseInt(dimens[0]);
+        mHeight = Integer.parseInt(dimens[1]);
+    }
+
+    public void setFramerate(int framerate) {
+        mFramerate = framerate;
+    }
+
+    public void setFramerate(String framerate) {
+        mFramerate = Integer.parseInt(framerate);
     }
 
     public int getVendorId() {
@@ -86,6 +122,10 @@ public class UVCCameraPrefs implements Parcelable {
 
     public String getFramerateString() {
         return Integer.toString(mFramerate);
+    }
+
+    public String getPrefsFile(){
+        return (getVendorId() + "-" + getProductId());
     }
 
     public static final Creator<UVCCameraPrefs> CREATOR = new Creator<UVCCameraPrefs>() {

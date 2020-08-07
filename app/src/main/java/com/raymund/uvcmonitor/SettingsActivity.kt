@@ -1,13 +1,18 @@
 package com.raymund.uvcmonitor
 
 import android.content.Context
+import android.content.SharedPreferences.Editor
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.preference.*
+import androidx.preference.ListPreference
+import androidx.preference.Preference
 import androidx.preference.Preference.OnPreferenceChangeListener
+import androidx.preference.PreferenceFragmentCompat
+import com.google.gson.Gson
 import com.serenegiant.usb.UVCCameraPrefs
 import com.serenegiant.usb.UVCSize
+
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -75,6 +80,15 @@ class SettingsActivity : AppCompatActivity() {
             initPreviewPref(mPreviewFramerate, framerateIndex, frame.intervalCharSeq)
         }
 
+        private fun updatePrefsFile() {
+            val id = mCameraPreferences!!.prefsFile;
+            val editor: Editor = context!!.getSharedPreferences(id, Context.MODE_PRIVATE).edit()
+            val gson = Gson()
+            val json: String = gson.toJson(mCameraPreferences)
+            editor.putString(id, json)
+            editor.commit()
+        }
+
         override fun onPreferenceChange(preference: Preference?, newValue: Any?): Boolean {
             val key = preference!!.key
             val index = (preference as ListPreference?)!!.findIndexOfValue(newValue as String)
@@ -85,6 +99,10 @@ class SettingsActivity : AppCompatActivity() {
                     val frame = format!!.getFrame(0)
                     updatePreviewPref(mPreviewResolution, format.frameResCharSeq)
                     updatePreviewPref(mPreviewFramerate, frame.intervalCharSeq)
+                    mCameraPreferences!!.setFrameFormat(newValue as String)
+                    mCameraPreferences!!.setResolution(mPreviewResolution!!.value)
+                    mCameraPreferences!!.setFramerate(mPreviewFramerate!!.value)
+
                 }
                 "preview_resolution" -> {
                     val formatValue = mPreviewFrameFormat!!.value
@@ -92,11 +110,15 @@ class SettingsActivity : AppCompatActivity() {
                     val format = mSupportedSizeList!!.getFormat(formatIndex)
                     val frame = format.getFrame(index)
                     updatePreviewPref(mPreviewFramerate, frame.intervalCharSeq)
+                    mCameraPreferences!!.setResolution(newValue as String)
+                    mCameraPreferences!!.setFramerate(mPreviewFramerate!!.value)
                 }
                 "preview_framerate" -> {
-                    // TODO: Add code to save preferences
+                    mCameraPreferences!!.setFramerate(newValue as String)
                 }
             }
+
+            updatePrefsFile()
 
             return true
         }

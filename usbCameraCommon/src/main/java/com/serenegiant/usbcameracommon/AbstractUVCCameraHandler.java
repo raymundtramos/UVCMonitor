@@ -118,6 +118,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		return thread.getCameraPrefs();
 	}
 
+	public String getVenProId() {
+		final CameraThread thread = mWeakThread.get();
+		return thread.getVenProId();
+	}
+
 	public boolean isOpened() {
 		final CameraThread thread = mWeakThread.get();
 		return thread != null && thread.isCameraOpened();
@@ -453,6 +458,12 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		public UVCCameraPrefs getCameraPrefs() {
 			synchronized (mSync) {
 				return mUVCCamera.getCameraPrefs();
+			}
+		}
+
+		public String getVenProId() {
+			synchronized (mSync) {
+				return mUVCCamera.getVenProId();
 			}
 		}
 

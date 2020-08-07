@@ -118,6 +118,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             mCameraPrefs = gson.fromJson(json, UVCCameraPrefs::class.java)
 
             mCameraView!!.setAspectRatio(mCameraPrefs!!.width, mCameraPrefs!!.height)
+            mCameraHandler!!.resize(mCameraPrefs!!.width, mCameraPrefs!!.height)
         }
     }
 
@@ -150,9 +151,10 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 width: Int,
                 height: Int
             ) {
+                // This is needed because the thread to startPreview
+                // and update the surface size don't match up
+                // I don't know how to match them up ATM
                 if (mCameraHandler!!.isPreviewing) {
-                    mCameraHandler!!.stopPreview()
-                    mCameraHandler!!.resize(mCameraPrefs!!.width, mCameraPrefs!!.height)
                     startPreview()
                 }
             }

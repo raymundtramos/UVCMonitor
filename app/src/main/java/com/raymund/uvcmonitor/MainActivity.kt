@@ -162,9 +162,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 // This is needed because the thread to startPreview
                 // and update the surface size don't match up
                 // I don't know how to match them up ATM
-                if (mCameraHandler!!.isPreviewing) {
-                    startPreview()
-                }
+                startPreview()
             }
 
             override fun onSurfaceDestroy(view: CameraViewInterface?, surface: Surface?) {
@@ -209,13 +207,18 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 ctrlBlock: UsbControlBlock,
                 createNew: Boolean
             ) {
+                if (mCameraHandler!!.isOpened) {
+                    mCameraHandler!!.close()
+                }
                 runOnUiThread(Runnable {
-                    val id = device.vendorId.toString() + "-" + device.productId.toString()
+                    val vendorId = device.vendorId.toString()
+                    val productId = device.productId.toString()
+                    val id = "$vendorId-$productId"
                     loadCameraPrefs(id)
                     mCameraHandler!!.open(ctrlBlock)
                     startPreview()
-
                 })
+
             }
 
             override fun onDisconnect(

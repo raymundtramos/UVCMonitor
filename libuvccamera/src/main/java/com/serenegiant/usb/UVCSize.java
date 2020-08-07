@@ -211,6 +211,28 @@ public class UVCSize implements Parcelable {
             }
         }
 
+        public String getTypeString() {
+            switch (bDescriptorSubtype) {
+                case FORMAT_DESC_TYPE_UNCOMPRESSED:
+                    return "YUYV";
+                case FORMAT_DESC_TYPE_MJPEG:
+                    return "MJPEG";
+                default:
+                    return "Undefined";
+            }
+        }
+
+        public String getTypeString(int frameFormat) {
+            switch (frameFormat) {
+                case UVCCamera.FRAME_FORMAT_YUYV:
+                    return "YUYV";
+                case UVCCamera.FRAME_FORMAT_MJPEG:
+                    return "MJPEG";
+                default:
+                    return "Undefined";
+            }
+        }
+
         public int getFormatIndex() {
             return bFormatIndex;
         }
@@ -370,17 +392,7 @@ public class UVCSize implements Parcelable {
         CharSequence[] result = new CharSequence[size];
 
         for (int i = 0; i < size; i++) {
-            switch (mFormats.get(i).getDescriptorSubtype()) {
-                case FORMAT_DESC_TYPE_UNCOMPRESSED:
-                    result[i] = "YUYV";
-                    break;
-                case FORMAT_DESC_TYPE_MJPEG:
-                    result[i] = "MJPEG";
-                    break;
-                default:
-                    result[i] = "Undefined";
-                    break;
-            }
+            result[i] = mFormats.get(i).getTypeString();
         }
 
         return result;

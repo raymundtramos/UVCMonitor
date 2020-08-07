@@ -106,9 +106,7 @@ class SettingsActivity : AppCompatActivity() {
                 val format = mSupportedSizeList!!.getFormat(index);
                 val frame = format!!.getFrame(0);
 
-                preference.apply {
-                    summary = newValue as CharSequence?
-                }
+                preference.summary = newValue
                 updatePreviewPref(mPreviewResolution, format!!.frameResCharSeq)
                 updatePreviewPref(mPreviewFramerate, frame!!.intervalCharSeq)
                 return true
@@ -118,15 +116,11 @@ class SettingsActivity : AppCompatActivity() {
                 val format = mSupportedSizeList!!.getFormat(formatIndex)
                 val frame = format.getFrame(index);
 
-                preference.apply {
-                    summary = newValue as CharSequence?
-                }
+                preference.summary = newValue
                 updatePreviewPref(mPreviewFramerate, frame!!.intervalCharSeq)
                 return true
             } else if (key == "preview_framerate") {
-                preference.apply {
-                    summary = newValue as CharSequence?
-                }
+                preference.summary = newValue
                 return true
             } else {
                 return false

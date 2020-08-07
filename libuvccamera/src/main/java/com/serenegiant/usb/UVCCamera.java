@@ -122,6 +122,8 @@ public class UVCCamera {
     protected long mProcSupports;				// プロセッシングユニットでサポートしている機能フラグ
     protected int mCurrentFrameFormat = FRAME_FORMAT_MJPEG;
 	protected int mCurrentWidth = DEFAULT_PREVIEW_WIDTH, mCurrentHeight = DEFAULT_PREVIEW_HEIGHT;
+	protected int mCurrentMinFps = DEFAULT_PREVIEW_MIN_FPS;
+	protected int mCurrentMaxFps = DEFAULT_PREVIEW_MAX_FPS;
 	protected float mCurrentBandwidthFactor = DEFAULT_BANDWIDTH;
     protected String mSupportedSize;
     protected UVCSize mCurrentSizeList;
@@ -275,13 +277,30 @@ public class UVCCamera {
 		return mCurrentSizeList;
 	}
 
+	public synchronized UVCCameraPrefs getCameraPrefs() {
+    	UsbDevice device = getDevice();
+    	if(device != null) {
+			return new UVCCameraPrefs(
+					device.getVendorId(),
+					device.getDeviceId(),
+					mCurrentFrameFormat,
+					mCurrentWidth,
+					mCurrentHeight,
+					mCurrentMaxFps
+			);
+		}
+    	else {
+    		return null;
+		}
+	}
+
 	/**
 	 * Set preview size and preview mode
 	 * @param width
 	   @param height
 	 */
 	public void setPreviewSize(final int width, final int height) {
-		setPreviewSize(width, height, DEFAULT_PREVIEW_MIN_FPS, DEFAULT_PREVIEW_MAX_FPS, mCurrentFrameFormat, mCurrentBandwidthFactor);
+		setPreviewSize(width, height, mCurrentMinFps, mCurrentMaxFps, mCurrentFrameFormat, mCurrentBandwidthFactor);
 	}
 
 	/**
@@ -291,7 +310,7 @@ public class UVCCamera {
 	 * @param frameFormat either FRAME_FORMAT_YUYV(0) or FRAME_FORMAT_MJPEG(1)
 	 */
 	public void setPreviewSize(final int width, final int height, final int frameFormat) {
-		setPreviewSize(width, height, DEFAULT_PREVIEW_MIN_FPS, DEFAULT_PREVIEW_MAX_FPS, frameFormat, mCurrentBandwidthFactor);
+		setPreviewSize(width, height, mCurrentMinFps, mCurrentMaxFps, frameFormat, mCurrentBandwidthFactor);
 	}
 	
 	/**
@@ -302,7 +321,11 @@ public class UVCCamera {
 	   @param bandwidth [0.0f,1.0f]
 	 */
 	public void setPreviewSize(final int width, final int height, final int frameFormat, final float bandwidth) {
-		setPreviewSize(width, height, DEFAULT_PREVIEW_MIN_FPS, DEFAULT_PREVIEW_MAX_FPS, frameFormat, bandwidth);
+		setPreviewSize(width, height, mCurrentMinFps, mCurrentMaxFps, frameFormat, bandwidth);
+	}
+
+	public void setPreviewSize(final int width, final int height, final int frameFormat, final int fps) {
+		setPreviewSize(width, height, mCurrentMinFps, fps, frameFormat, mCurrentBandwidthFactor);
 	}
 
 	/**
@@ -324,6 +347,8 @@ public class UVCCamera {
 			mCurrentFrameFormat = frameFormat;
 			mCurrentWidth = width;
 			mCurrentHeight = height;
+			mCurrentMinFps = min_fps;
+			mCurrentMaxFps = max_fps;
 			mCurrentBandwidthFactor = bandwidthFactor;
 		}
 	}

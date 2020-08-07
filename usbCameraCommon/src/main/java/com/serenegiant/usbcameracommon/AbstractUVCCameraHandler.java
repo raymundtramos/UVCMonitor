@@ -352,6 +352,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		private final int mEncoderType;
 		private final Set<CameraCallback> mCallbacks = new CopyOnWriteArraySet<CameraCallback>();
 		private int mWidth, mHeight, mPreviewMode;
+		private int mMinFps;
+		private int mMaxFps;
 		private float mBandwidthFactor;
 		private boolean mIsPreviewing;
 		private boolean mIsRecording;
@@ -393,6 +395,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			mWidth = width;
 			mHeight = height;
 			mPreviewMode = format;
+			mMinFps = UVCCamera.DEFAULT_PREVIEW_MIN_FPS;
+			mMaxFps = UVCCamera.DEFAULT_PREVIEW_MAX_FPS; //TODO: Need to pass in FPS value
 			mBandwidthFactor = bandwidthFactor;
 			mWeakParent = new WeakReference<Activity>(parent);
 			mWeakCameraView = new WeakReference<CameraViewInterface>(cameraView);
@@ -495,11 +499,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			if (DEBUG) Log.v(TAG_THREAD, "handleStartPreview:");
 			if ((mUVCCamera == null) || mIsPreviewing) return;
 			try {
-				mUVCCamera.setPreviewSize(mWidth, mHeight, 1, 31, mPreviewMode, mBandwidthFactor);
+				mUVCCamera.setPreviewSize(mWidth, mHeight, mMinFps, mMaxFps, mPreviewMode, mBandwidthFactor);
 			} catch (final IllegalArgumentException e) {
 				try {
 					// fallback to YUV mode
-					mUVCCamera.setPreviewSize(mWidth, mHeight, 1, 31, UVCCamera.DEFAULT_PREVIEW_MODE, mBandwidthFactor);
+					mUVCCamera.setPreviewSize(mWidth, mHeight, mMinFps, mMaxFps, UVCCamera.DEFAULT_PREVIEW_MODE, mBandwidthFactor);
 				} catch (final IllegalArgumentException e1) {
 					callOnError(e1);
 					return;

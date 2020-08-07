@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/header_preview">
+        <ListPreference
+            app:key="@string/pref_preview_frame_format_key"
+            app:title="@string/pref_preview_frame_format_title"
+            app:summary="%s"/>
+        <ListPreference
+            app:key="@string/pref_preview_resolution_key"
+            app:title="@string/pref_preview_resolution_title"
+            app:summary="%s"/>
+        <ListPreference
+            app:key="@string/pref_preview_framerate_key"
+            app:title="@string/pref_preview_framerate_title"
+            app:summary="%s"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/header_record">
+    </PreferenceCategory>
+</PreferenceScreen>

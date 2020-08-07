@@ -52,8 +52,40 @@ public class UVCCameraPrefs implements Parcelable {
         mFramerate = in.readInt();
     }
 
-    public String getResolutionString(){
-        return (mWidth + "x" + mHeight);
+    public int getVendorId() {
+        return mVendorId;
+    }
+
+    public int getProductId() {
+        return mProductId;
+    }
+
+    public int getFrameFormat() {
+        return mFrameFormat;
+    }
+
+    public int getWidth() {
+        return mWidth;
+    }
+
+    public int getHeight() {
+        return mHeight;
+    }
+
+    public int getFramerate() {
+        return mFramerate;
+    }
+
+    public String getFrameFormatString() {
+        return UVCSize.Format.getTypeString(mFrameFormat);
+    }
+
+    public String getResolutionString() {
+        return UVCSize.Frame.getResolutionString(mWidth, mHeight);
+    }
+
+    public String getFramerateString() {
+        return Integer.toString(mFramerate);
     }
 
     public static final Creator<UVCCameraPrefs> CREATOR = new Creator<UVCCameraPrefs>() {

@@ -109,6 +109,14 @@ public class UVCSize implements Parcelable {
             }
         }
 
+        public String getResolutionString() {
+            return getResolutionString(wWidth, wHeight);
+        }
+
+        public static String getResolutionString(int width, int height) {
+            return (width + "x" + height);
+        }
+
         public CharSequence[] getIntervalCharSeq() {
             int size = intervals.size();
             CharSequence[] result = new CharSequence[size];
@@ -118,6 +126,15 @@ public class UVCSize implements Parcelable {
             }
 
             return result;
+        }
+
+        public int findInterval(int framerate) {
+            for (int i = 0; i < intervals.size(); i++) {
+                if (framerate == intervals.get(i)) {
+                    return i;
+                }
+            }
+            return 0;
         }
 
         @Override
@@ -222,7 +239,7 @@ public class UVCSize implements Parcelable {
             }
         }
 
-        public String getTypeString(int frameFormat) {
+        public static String getTypeString(int frameFormat) {
             switch (frameFormat) {
                 case UVCCamera.FRAME_FORMAT_YUYV:
                     return "YUYV";
@@ -255,10 +272,19 @@ public class UVCSize implements Parcelable {
 
             for (int i = 0; i < size; i++) {
                 Frame frame = frameDescs.get(i);
-                result[i] = frame.getWidth() + "x" + frame.getHeight();
+                result[i] = frame.getResolutionString();
             }
 
             return result;
+        }
+
+        public int findFrame(String resolution) {
+            for (int i = 0; i < frameDescs.size(); i++) {
+                if (resolution.equals(frameDescs.get(i).getResolutionString())) {
+                    return i;
+                }
+            }
+            return 0;
         }
 
         @Override
@@ -385,6 +411,15 @@ public class UVCSize implements Parcelable {
         } else {
             throw new IndexOutOfBoundsException();
         }
+    }
+
+    public int findFrameFormat(int frameFormat) {
+        for (int i = 0; i < mFormats.size(); i++) {
+            if (frameFormat == mFormats.get(i).getFrameFormat()) {
+                return i;
+            }
+        }
+        return 0;
     }
 
     public CharSequence[] getFormatCharSeq() {

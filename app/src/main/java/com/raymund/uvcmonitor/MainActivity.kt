@@ -160,6 +160,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         if (mCameraHandler!!.isOpened) {
             val intent: Intent = Intent(this, SettingsActivity::class.java)
             intent.putExtra("SupportedSizeList", mCameraHandler!!.supportedSizeList)
+            intent.putExtra("CameraPreferences", mCameraHandler!!.cameraPrefs)
             startActivity(intent)
         } else {
             toastUser("No camera is selected. Cannot access settings.")

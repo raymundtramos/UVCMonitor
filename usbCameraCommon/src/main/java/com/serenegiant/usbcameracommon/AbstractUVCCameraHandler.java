@@ -672,6 +672,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 
 		public void handleUpdateCameraPrefs(UVCCameraPrefs prefs) {
 			synchronized (mSync) {
+				mMinFps = prefs.getFramerate();
 				mMaxFps = prefs.getFramerate();
 				mPreviewMode = prefs.getFrameFormat();
 				mWidth = prefs.getWidth();

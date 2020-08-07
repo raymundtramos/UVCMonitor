@@ -210,7 +210,7 @@ public class UVCCamera {
 				mNativePtr,
 				frame.getWidth(),
 				frame.getHeight(),
-				DEFAULT_PREVIEW_MIN_FPS,
+				frame.getDefaultFrameInterval(),
 				frame.getDefaultFrameInterval(),
 				format.getFrameFormat(),
 				DEFAULT_BANDWIDTH);

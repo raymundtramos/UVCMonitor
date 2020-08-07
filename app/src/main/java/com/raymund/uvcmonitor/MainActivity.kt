@@ -71,10 +71,13 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         if (mCameraView != null) {
             mCameraView!!.onResume()
         }
+        if (mCameraHandler!!.isOpened) {
+            startPreview()
+        }
     }
 
     override fun onStop() {
-        mCameraHandler!!.close();
+        mCameraHandler!!.stopPreview();
         if (mCameraView != null) {
             mCameraView!!.onPause();
         }

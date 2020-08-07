@@ -28,6 +28,7 @@ import android.view.Surface;
 
 import com.serenegiant.glutils.RendererHolder;
 import com.serenegiant.usb.UVCCamera;
+import com.serenegiant.usb.UVCCameraPrefs;
 import com.serenegiant.widget.CameraViewInterface;
 
 public class UVCCameraHandlerMultiSurface extends AbstractUVCCameraHandler {
@@ -133,6 +134,13 @@ public class UVCCameraHandlerMultiSurface extends AbstractUVCCameraHandler {
 		super.resize(width, height);
 		if (mRendererHolder != null) {
 			mRendererHolder.resize(width, height);
+		}
+	}
+
+	public synchronized void updateCameraParams(UVCCameraPrefs prefs) {
+		super.updateCameraParams(prefs);
+		if (mRendererHolder != null) {
+			mRendererHolder.resize(prefs.getWidth(), prefs.getHeight());
 		}
 	}
 

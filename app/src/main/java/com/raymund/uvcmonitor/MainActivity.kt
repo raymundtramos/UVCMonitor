@@ -118,7 +118,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             mCameraPrefs = gson.fromJson(json, UVCCameraPrefs::class.java)
 
             mCameraView!!.setAspectRatio(mCameraPrefs!!.width, mCameraPrefs!!.height)
-            mCameraHandler!!.resize(mCameraPrefs!!.width, mCameraPrefs!!.height)
+            mCameraHandler!!.updateCameraParams(mCameraPrefs)
         }
     }
 

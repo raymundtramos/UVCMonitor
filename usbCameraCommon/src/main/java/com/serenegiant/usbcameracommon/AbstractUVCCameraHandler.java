@@ -90,6 +90,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 	private static final int MSG_MEDIA_UPDATE = 7;
 	private static final int MSG_RELEASE = 9;
 	private static final int MSG_RESIZE = 10;
+	private static final int MSG_UPDATE_CAMERA_PARAMS = 11;
 
 	private final WeakReference<AbstractUVCCameraHandler.CameraThread> mWeakThread;
 	private volatile boolean mReleased;
@@ -181,6 +182,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		dimen.height = height;
 
 		sendMessage(obtainMessage(MSG_RESIZE, dimen));
+	}
+
+	public void updateCameraParams(UVCCameraPrefs prefs) {
+		checkReleased();
+		sendMessage(obtainMessage(MSG_UPDATE_CAMERA_PARAMS, prefs));
 	}
 
 	protected void startPreview(final Object surface) {
@@ -348,6 +354,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			break;
 		case MSG_RESIZE:
 			thread.handleResize((CameraThread.Dimensions)msg.obj);
+			break;
+		case MSG_UPDATE_CAMERA_PARAMS:
+			thread.handleUpdateCameraParams((UVCCameraPrefs)msg.obj);
 			break;
 		default:
 			throw new RuntimeException("unsupported message:what=" + msg.what);
@@ -658,6 +667,13 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		public void handleResize(CameraThread.Dimensions dimen) {
 			mWidth = dimen.width;
 			mHeight = dimen.height;
+		}
+
+		public void handleUpdateCameraParams(UVCCameraPrefs prefs) {
+			mMaxFps = prefs.getFramerate();
+			mPreviewMode = prefs.getFrameFormat();
+			mWidth = prefs.getWidth();
+			mHeight = prefs.getHeight();
 		}
 
 		private final IFrameCallback mIFrameCallback = new IFrameCallback() {

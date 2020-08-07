@@ -154,9 +154,13 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     private val mSettingsOnClickListener: View.OnClickListener = View.OnClickListener {
-        val intent: Intent = Intent(this, SettingsActivity::class.java)
-        intent.putExtra("SupportedSizeList", mCameraHandler!!.supportedSizeList)
-        startActivity(intent)
+        if (mCameraHandler!!.isOpened) {
+            val intent: Intent = Intent(this, SettingsActivity::class.java)
+            intent.putExtra("SupportedSizeList", mCameraHandler!!.supportedSizeList)
+            startActivity(intent)
+        } else {
+            toastUser("No camera is selected. Cannot access settings.")
+        }
     }
 
     private val mOnDeviceConnectListener: OnDeviceConnectListener =

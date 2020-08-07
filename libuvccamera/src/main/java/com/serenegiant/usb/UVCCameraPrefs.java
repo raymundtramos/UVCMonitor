@@ -1,6 +1,9 @@
 package com.serenegiant.usb;
 
-public class UVCCameraPrefs {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class UVCCameraPrefs implements Parcelable {
     private int mVendorId;
     private int mProductId;
     private int mFrameFormat;
@@ -40,7 +43,43 @@ public class UVCCameraPrefs {
         this.mFramerate = Integer.parseInt(_framerate);
     }
 
+    protected UVCCameraPrefs(Parcel in) {
+        mVendorId = in.readInt();
+        mProductId = in.readInt();
+        mFrameFormat = in.readInt();
+        mWidth = in.readInt();
+        mHeight = in.readInt();
+        mFramerate = in.readInt();
+    }
+
     public String getResolutionString(){
         return (mWidth + "x" + mHeight);
+    }
+
+    public static final Creator<UVCCameraPrefs> CREATOR = new Creator<UVCCameraPrefs>() {
+        @Override
+        public UVCCameraPrefs createFromParcel(Parcel in) {
+            return new UVCCameraPrefs(in);
+        }
+
+        @Override
+        public UVCCameraPrefs[] newArray(int size) {
+            return new UVCCameraPrefs[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(mVendorId);
+        dest.writeInt(mProductId);
+        dest.writeInt(mFrameFormat);
+        dest.writeInt(mWidth);
+        dest.writeInt(mHeight);
+        dest.writeInt(mFramerate);
     }
 }

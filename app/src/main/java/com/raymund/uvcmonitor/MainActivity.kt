@@ -139,11 +139,18 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     private fun startPreview() {
-        val surface = Surface(mCameraView!!.surfaceTexture)
-
-        if (surface != null) {
+        if (mPreviewSurface != null) {
             mUVCCamera!!.stopPreview()
-            mUVCCamera!!.setPreviewDisplay(surface)
+            mPreviewSurface!!.release()
+            mPreviewSurface = null
+        }
+
+        mPreviewSurface = Surface(mCameraView!!.surfaceTexture)
+
+        if (mPreviewSurface != null) {
+            Log.i("RAYMUNDTEST_PREF", "HERE I AM in START PREVIEW")
+
+            mUVCCamera!!.setPreviewDisplay(mPreviewSurface)
         }
         mUVCCamera!!.startPreview()
     }
@@ -178,10 +185,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             }
 
             override fun onSurfaceTextureDestroyed(surface: SurfaceTexture?): Boolean {
-                if (mPreviewSurface != null) {
-                    mPreviewSurface!!.release()
-                    mPreviewSurface = null
-                }
                 return true
             }
         }
@@ -239,13 +242,10 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                             return@Runnable
                         }
                     }
-                    val surfaceTexture: SurfaceTexture = mCameraView!!.surfaceTexture
-                    mPreviewSurface = Surface(surfaceTexture)
-                    camera.setPreviewDisplay(mPreviewSurface)
-                    camera.startPreview()
 
                     mLock.withLock {
                         mUVCCamera = camera
+                        startPreview()
                     }
                 }, 0)
             }

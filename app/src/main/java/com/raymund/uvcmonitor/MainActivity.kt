@@ -12,16 +12,14 @@ import android.widget.ImageButton
 import android.widget.Toast
 import com.google.gson.Gson
 import com.serenegiant.common.BaseActivity
-import com.serenegiant.usb.CameraDialog
+import com.serenegiant.usb.*
 import com.serenegiant.usb.CameraDialog.CameraDialogParent
-import com.serenegiant.usb.USBMonitor
 import com.serenegiant.usb.USBMonitor.OnDeviceConnectListener
 import com.serenegiant.usb.USBMonitor.UsbControlBlock
-import com.serenegiant.usb.UVCCamera
-import com.serenegiant.usb.UVCCameraPrefs
 import com.serenegiant.usbcameracommon.UVCCameraHandlerMultiSurface
 import com.serenegiant.widget.CameraViewInterface
 import com.serenegiant.widget.UVCCameraTextureView
+import java.nio.ByteBuffer
 
 class MainActivity : BaseActivity(), CameraDialogParent {
     private val REQ_CODE_SETTINGS = 1
@@ -65,10 +63,9 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             UVCCameraHandlerMultiSurface.createHandler(
                 this,
                 mCameraView,
-                0,
                 UVCCamera.DEFAULT_PREVIEW_WIDTH,
                 UVCCamera.DEFAULT_PREVIEW_HEIGHT,
-                UVCCamera.DEFAULT_PREVIEW_MODE
+                mIFrameCallback
             )
     }
 
@@ -146,6 +143,14 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             mCameraHandler!!.addSurface(mPreviewSurfaceId!!, surface, true)
         }
         mCameraHandler!!.startPreview()
+    }
+
+    private val mIFrameCallback: IFrameCallback = object: IFrameCallback{
+        override fun onFrame(frame: ByteBuffer?) {
+            runOnUiThread(Runnable {
+                Log.i("RAYMUNDTEST_PREFS", "hello from on FRAME")
+            })
+        }
     }
 
     private val mCameraViewCallback: CameraViewInterface.Callback =

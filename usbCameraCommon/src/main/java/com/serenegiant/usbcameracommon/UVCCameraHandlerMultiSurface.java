@@ -27,6 +27,7 @@ import android.app.Activity;
 import android.view.Surface;
 
 import com.serenegiant.glutils.RendererHolder;
+import com.serenegiant.usb.IFrameCallback;
 import com.serenegiant.usb.UVCCamera;
 import com.serenegiant.usb.UVCCameraPrefs;
 import com.serenegiant.widget.CameraViewInterface;
@@ -45,6 +46,15 @@ public class UVCCameraHandlerMultiSurface extends AbstractUVCCameraHandler {
 			final int width, final int height) {
 
 		return createHandler(parent, cameraView, 1, width, height, UVCCamera.FRAME_FORMAT_MJPEG, UVCCamera.DEFAULT_BANDWIDTH);
+	}
+
+	public static final UVCCameraHandlerMultiSurface createHandler(
+			final Activity parent, final CameraViewInterface cameraView,
+			final int width, final int height, IFrameCallback iFrameCallback) {
+
+		final CameraThread thread = new CameraThread(UVCCameraHandlerMultiSurface.class, parent, cameraView, 0, width, height, UVCCamera.FRAME_FORMAT_MJPEG, UVCCamera.DEFAULT_BANDWIDTH, iFrameCallback);
+		thread.start();
+		return (UVCCameraHandlerMultiSurface)thread.getHandler();
 	}
 
 	/**

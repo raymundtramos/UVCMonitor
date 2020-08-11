@@ -391,6 +391,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
 		 */
 		private MediaMuxerWrapper mMuxer;
 		private MediaVideoBufferEncoder mVideoEncoder;
+		private IFrameCallback mIFrameCallback2;
 
 		/**
 		 *
@@ -420,6 +421,14 @@ abstract class AbstractUVCCameraHandler extends Handler {
 			mWeakParent = new WeakReference<Activity>(parent);
 			mWeakCameraView = new WeakReference<CameraViewInterface>(cameraView);
 			loadShutterSound(parent);
+		}
+
+		CameraThread(final Class<? extends AbstractUVCCameraHandler> clazz,
+					 final Activity parent, final CameraViewInterface cameraView,
+					 final int encoderType, final int width, final int height, final int format,
+					 final float bandwidthFactor, final IFrameCallback iFrameCallback) {
+			this(clazz, parent, cameraView, encoderType, width, height, format, bandwidthFactor);
+			mIFrameCallback2 = iFrameCallback;
 		}
 
 		static public class Dimensions{
@@ -505,6 +514,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
 				camera.open(ctrlBlock);
 				synchronized (mSync) {
 					mUVCCamera = camera;
+					if(mIFrameCallback2 != null) {
+						mUVCCamera.setFrameCallback(mIFrameCallback2, UVCCamera.PIXEL_FORMAT_NV21);
+					}
 				}
 				callOnOpen();
 			} catch (final Exception e) {

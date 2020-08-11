@@ -95,12 +95,11 @@ public class CameraHandler {
 
     public void startPreview() {
         synchronized (mSync) {
-            if (isPreviewing()) {
-                mCamera.stopPreview();
-                mPreviewSurface.release();
-            }
+            mCamera.stopPreview();
 
-            mPreviewSurface = new Surface(mCameraView.getSurfaceTexture());
+            if (mPreviewSurface == null) {
+                mPreviewSurface = new Surface(mCameraView.getSurfaceTexture());
+            }
 
             if (mPreviewSurface != null && isOpened()) {
                 mCamera.setPreviewDisplay(mPreviewSurface);
@@ -116,7 +115,6 @@ public class CameraHandler {
                 mCamera.stopPreview();
                 mIsPreviewing = false;
             }
-
         }
     }
 

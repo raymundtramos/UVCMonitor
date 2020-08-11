@@ -118,7 +118,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 width: Int,
                 height: Int
             ) {
-                mCameraHandler!!.startPreview()
             }
 
             override fun onSurfaceTextureUpdated(surface: SurfaceTexture?) {
@@ -158,7 +157,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 runOnUiThread(Runnable {
                     mCameraHandler!!.open(ctrlBlock);
                     mCameraHandler!!.applyPreferences(this@MainActivity)
-                    mCameraHandler!!.startPreview();
+                    mCameraHandler!!.startPreview()
                 })
             }
 

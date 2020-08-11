@@ -2,36 +2,44 @@ package com.raymund.uvcmonitor
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.SurfaceTexture
 import android.hardware.usb.UsbDevice
 import android.os.Bundle
 import android.util.Log
 import android.view.Surface
+import android.view.TextureView
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.Toast
 import com.google.gson.Gson
+import com.raymund.widget.CameraTextureView
 import com.serenegiant.common.BaseActivity
 import com.serenegiant.usb.*
 import com.serenegiant.usb.CameraDialog.CameraDialogParent
 import com.serenegiant.usb.USBMonitor.OnDeviceConnectListener
 import com.serenegiant.usb.USBMonitor.UsbControlBlock
-import com.serenegiant.usbcameracommon.UVCCameraHandlerMultiSurface
-import com.serenegiant.widget.CameraViewInterface
-import com.serenegiant.widget.UVCCameraTextureView
 import java.nio.ByteBuffer
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 class MainActivity : BaseActivity(), CameraDialogParent {
     private val REQ_CODE_SETTINGS = 1
 
+    private val mLock = ReentrantLock()
+
     private var mUSBMonitor: USBMonitor? = null
-    private var mCameraView: UVCCameraTextureView? = null
+    private var mUVCCamera: UVCCamera? = null
+
+    private var mCameraView: CameraTextureView? = null
     private var mCameraButton: ImageButton? = null
-    private var mRecordButton: ImageButton? = null
     private var mSettingsButton: ImageButton? = null
-    private var mCameraHandler: UVCCameraHandlerMultiSurface? = null
-    private var mPreviewSurfaceId: Int? = null
+    private var mPreviewSurface: Surface? = null
     private var mCameraPrefs: UVCCameraPrefs? = null;
+
+    // TODO: Need to find a way to dynamically change this
+    private val mMediaWidth = UVCCamera.DEFAULT_PREVIEW_WIDTH
+    private val mMediaHeight = UVCCamera.DEFAULT_PREVIEW_HEIGHT
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,63 +52,34 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         mCameraButton = findViewById(R.id.camera_button)
         mCameraButton!!.setOnClickListener(mDeviceOnClickListener)
 
-        mRecordButton = findViewById(R.id.record_button)
-        mRecordButton!!.setOnClickListener(mRecordOnClickListener)
-
         mSettingsButton = findViewById(R.id.settings_button)
         mSettingsButton!!.setOnClickListener(mSettingsOnClickListener)
 
         mCameraView = findViewById(R.id.camera_texture_view)
-        mCameraView!!.setAspectRatio(
-            UVCCamera.DEFAULT_PREVIEW_WIDTH,
-            UVCCamera.DEFAULT_PREVIEW_HEIGHT
-        )
-        mCameraView!!.setCallback(mCameraViewCallback)
+        mCameraView!!.setAspectRatio(mMediaWidth / mMediaHeight.toDouble())
 
+        mCameraView!!.surfaceTextureListener = mSurfaceTextureListener
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
-
-        mCameraHandler =
-            UVCCameraHandlerMultiSurface.createHandler(
-                this,
-                mCameraView,
-                UVCCamera.DEFAULT_PREVIEW_WIDTH,
-                UVCCamera.DEFAULT_PREVIEW_HEIGHT,
-                mIFrameCallback
-            )
     }
 
     override fun onStart() {
         super.onStart()
-        mUSBMonitor!!.register()
-        if (mCameraView != null) {
-            mCameraView!!.onResume()
-        }
-        if (mCameraHandler!!.isOpened) {
-            startPreview()
+        mLock.withLock {
+            mUSBMonitor!!.register()
+            if(mUVCCamera != null) {
+                startPreview()
+            }
         }
     }
 
     override fun onStop() {
-        mCameraHandler!!.stopPreview();
-        if (mCameraView != null) {
-            mCameraView!!.onPause();
-        }
+        mUVCCamera!!.stopPreview()
         super.onStop()
     }
 
     override fun onDestroy() {
-        if (mCameraHandler != null) {
-            mCameraHandler!!.release();
-            mCameraHandler = null;
-        }
-        if (mUSBMonitor != null) {
-            mUSBMonitor!!.destroy();
-            mUSBMonitor = null;
-        }
-        mCameraView = null;
-        mCameraButton = null;
-        mRecordButton = null;
-        mSettingsButton = null;
+        destroyUVCCamera()
+        destroyViewAndMonitor()
         super.onDestroy()
     }
 
@@ -108,7 +87,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == REQ_CODE_SETTINGS) {
-            loadCameraPrefs(mCameraHandler!!.venProId)
+            loadCameraPrefs(mUVCCamera!!.venProId)
         }
     }
 
@@ -117,32 +96,56 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     }
 
     private fun loadCameraPrefs(id: String) {
-        Log.i("RAYMUNDTEST_PREF", id)
         val sharedPrefs = getSharedPreferences(id, Context.MODE_PRIVATE)
         val gson = Gson()
         val json: String = sharedPrefs.getString(id, "")
 
         if (json.isNotEmpty()) {
             mCameraPrefs = gson.fromJson(json, UVCCameraPrefs::class.java)
+            mUVCCamera!!.setPreviewSize(
+                mCameraPrefs!!.width,
+                mCameraPrefs!!.height,
+                mCameraPrefs!!.frameFormat,
+                mCameraPrefs!!.framerate
+            )
             mCameraView!!.setAspectRatio(mCameraPrefs!!.width, mCameraPrefs!!.height)
-            mCameraHandler!!.updateCameraPrefs(mCameraPrefs)
         } else {
             toastUser("No camera preferences found")
         }
     }
 
-    private fun startPreview() {
-        if (mPreviewSurfaceId != null) {
-            mCameraHandler!!.removeSurface(mPreviewSurfaceId!!)
+    private fun destroyViewAndMonitor() {
+        mLock.withLock {
+            mCameraView = null
+            mCameraButton = null
+            if (mUSBMonitor != null) {
+                mUSBMonitor!!.destroy()
+                mUSBMonitor = null
+            }
         }
+    }
 
+    private fun destroyUVCCamera() {
+        mLock.withLock {
+            if (mUVCCamera != null) {
+                mUVCCamera!!.destroy()
+                mUVCCamera = null
+            }
+            if (mPreviewSurface != null) {
+                mPreviewSurface!!.release()
+                mPreviewSurface = null
+            }
+        }
+    }
+
+    private fun startPreview() {
         val surface = Surface(mCameraView!!.surfaceTexture)
 
         if (surface != null) {
-            mPreviewSurfaceId = surface.hashCode()
-            mCameraHandler!!.addSurface(mPreviewSurfaceId!!, surface, true)
+            mUVCCamera!!.stopPreview()
+            mUVCCamera!!.setPreviewDisplay(surface)
         }
-        mCameraHandler!!.startPreview()
+        mUVCCamera!!.startPreview()
     }
 
     private val mIFrameCallback: IFrameCallback = object: IFrameCallback{
@@ -153,24 +156,33 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         }
     }
 
-    private val mCameraViewCallback: CameraViewInterface.Callback =
-        object : CameraViewInterface.Callback {
-            override fun onSurfaceCreated(view: CameraViewInterface?, surface: Surface?) {
-            }
-
-            override fun onSurfaceChanged(
-                view: CameraViewInterface?,
-                surface: Surface?,
+    private val mSurfaceTextureListener: TextureView.SurfaceTextureListener =
+        object : TextureView.SurfaceTextureListener {
+            override fun onSurfaceTextureAvailable(
+                surface: SurfaceTexture?,
                 width: Int,
                 height: Int
             ) {
-                // This is needed because the thread to startPreview
-                // and update the surface size don't match up
-                // I don't know how to match them up ATM
+            }
+
+            override fun onSurfaceTextureSizeChanged(
+                surface: SurfaceTexture?,
+                width: Int,
+                height: Int
+            ) {
+                Log.i("RAYMUNDTEST_PREF", "Here i am onSurfaceTextureSizeChanged")
                 startPreview()
             }
 
-            override fun onSurfaceDestroy(view: CameraViewInterface?, surface: Surface?) {
+            override fun onSurfaceTextureUpdated(surface: SurfaceTexture?) {
+            }
+
+            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture?): Boolean {
+                if (mPreviewSurface != null) {
+                    mPreviewSurface!!.release()
+                    mPreviewSurface = null
+                }
+                return true
             }
         }
 
@@ -178,23 +190,11 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         CameraDialog.showDialog(this@MainActivity)
     }
 
-    private val mRecordOnClickListener: View.OnClickListener = View.OnClickListener {
-        if (checkPermissionWriteExternalStorage()) {
-            if (!mCameraHandler!!.isRecording) {
-                mCameraHandler!!.startRecording()
-                toastUser("Started Recording")
-            } else {
-                mCameraHandler!!.stopRecording()
-                toastUser("Stopped Recording")
-            }
-        }
-    }
-
     private val mSettingsOnClickListener: View.OnClickListener = View.OnClickListener {
-        if (mCameraHandler!!.isOpened) {
+        if (mUVCCamera != null) {
             val intent: Intent = Intent(this, SettingsActivity::class.java)
-            intent.putExtra("SupportedSizeList", mCameraHandler!!.supportedSizeList)
-            intent.putExtra("CameraPreferences", mCameraHandler!!.cameraPrefs)
+            intent.putExtra("SupportedSizeList", mUVCCamera!!.supportedSizeList)
+            intent.putExtra("CameraPreferences", mUVCCamera!!.cameraPrefs)
             startActivityForResult(intent, REQ_CODE_SETTINGS)
         } else {
             toastUser("No camera is selected. Cannot access settings.")
@@ -203,6 +203,14 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     private val mOnDeviceConnectListener: OnDeviceConnectListener =
         object : OnDeviceConnectListener {
+            private fun initCamera(camera: UVCCamera, mode: Int) {
+                camera.setPreviewSize(
+                    mMediaWidth,
+                    mMediaHeight,
+                    mode
+                )
+            }
+
             override fun onAttach(device: UsbDevice) {
                 toastUser("USB device detected")
             }
@@ -212,27 +220,43 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 ctrlBlock: UsbControlBlock,
                 createNew: Boolean
             ) {
-                if (mCameraHandler!!.isOpened) {
-                    mCameraHandler!!.close()
-                }
-                runOnUiThread(Runnable {
-                    val vendorId = device.vendorId.toString()
-                    val productId = device.productId.toString()
-                    val id = "$vendorId-$productId"
-                    loadCameraPrefs(id)
-                    mCameraHandler!!.open(ctrlBlock)
-                    startPreview()
-                })
+                // Clear out the UVC Camera
+                destroyUVCCamera()
 
+                // Initialize the UVC Camera
+                queueEvent(Runnable {
+                    val camera = UVCCamera()
+                    camera.open(ctrlBlock)
+                    try {
+                        // Attempt to use MJPEG mode
+                        initCamera(camera, UVCCamera.FRAME_FORMAT_MJPEG)
+                    } catch (e: IllegalArgumentException) {
+                        try {
+                            // Fallback to YUV mode
+                            initCamera(camera, UVCCamera.DEFAULT_PREVIEW_MODE)
+                        } catch (e1: IllegalArgumentException) {
+                            camera.destroy()
+                            return@Runnable
+                        }
+                    }
+                    val surfaceTexture: SurfaceTexture = mCameraView!!.surfaceTexture
+                    mPreviewSurface = Surface(surfaceTexture)
+                    camera.setPreviewDisplay(mPreviewSurface)
+                    camera.startPreview()
+
+                    mLock.withLock {
+                        mUVCCamera = camera
+                    }
+                }, 0)
             }
 
             override fun onDisconnect(
                 device: UsbDevice,
                 ctrlBlock: UsbControlBlock
             ) {
-                if (mCameraHandler != null) {
-                    mCameraHandler!!.close()
-                }
+                queueEvent({
+                    destroyUVCCamera()
+                }, 0)
             }
 
             override fun onDettach(device: UsbDevice) {

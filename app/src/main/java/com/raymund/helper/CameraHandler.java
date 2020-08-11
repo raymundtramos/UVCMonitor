@@ -78,17 +78,21 @@ public class CameraHandler {
                 SharedPreferences prefs = context.getSharedPreferences(id, Context.MODE_PRIVATE);
                 Gson gson = new Gson();
                 String json = prefs.getString(id, "");
+                UVCCameraPrefs cameraPrefs;
 
                 if (!json.isEmpty()) {
-                    UVCCameraPrefs cameraPrefs = gson.fromJson(json, UVCCameraPrefs.class);
+                    cameraPrefs = gson.fromJson(json, UVCCameraPrefs.class);
                     mCamera.setPreviewSize(
                             cameraPrefs.getWidth(),
                             cameraPrefs.getHeight(),
                             cameraPrefs.getFrameFormat(),
                             cameraPrefs.getFramerate()
                     );
-                    mCameraView.setAspectRatio(cameraPrefs.getWidth(), cameraPrefs.getHeight());
+                } else {
+                    cameraPrefs = mCamera.getCameraPrefs();
                 }
+
+                mCameraView.setAspectRatio(cameraPrefs.getWidth(), cameraPrefs.getHeight());
             }
         }
     }

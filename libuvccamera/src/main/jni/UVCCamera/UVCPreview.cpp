@@ -171,7 +171,7 @@ int UVCPreview::setPreviewSize(int width, int height, int min_fps, int max_fps, 
 	ENTER();
 	
 	int result = 0;
-	if ((requestWidth != width) || (requestHeight != height) || (requestMode != mode)) {
+	if ((requestWidth != width) || (requestHeight != height) || (requestMode != mode) || (requestMinFps != min_fps) || (requestMaxFps != max_fps)) {
 		requestWidth = width;
 		requestHeight = height;
 		requestMinFps = min_fps;

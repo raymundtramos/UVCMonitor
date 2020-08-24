@@ -2,7 +2,12 @@ package com.raymund.helper;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.SurfaceTexture;
+import android.util.Log;
 import android.view.Surface;
+import android.view.TextureView;
+
+import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.raymund.widget.CameraTextureView;
@@ -22,7 +27,29 @@ public class CameraHandler {
 
     public CameraHandler(CameraTextureView view) {
         mCameraView = view;
+        mCameraView.setSurfaceTextureListener(mSurfaceTextureListener);
     }
+
+    private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int i, int i1) {
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int i, int i1) {
+            startPreview(surfaceTexture);
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
+            stopPreview();
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
+        }
+    };
 
     public boolean isOpened() {
         synchronized (mSync) {
@@ -110,14 +137,19 @@ public class CameraHandler {
     }
 
     public void startPreview() {
+        startPreview(mCameraView.getSurfaceTexture());
+    }
+
+    public void startPreview(SurfaceTexture st) {
         synchronized (mSync) {
             mCamera.stopPreview();
 
-            if (mPreviewSurface == null) {
-                mPreviewSurface = new Surface(mCameraView.getSurfaceTexture());
+            if (mPreviewSurface != null) {
+                mPreviewSurface.release();
             }
 
-            if (mPreviewSurface != null && isOpened()) {
+            if (isOpened()) {
+                mPreviewSurface = new Surface(st);
                 mCamera.setPreviewDisplay(mPreviewSurface);
                 mCamera.startPreview();
                 mIsPreviewing = true;

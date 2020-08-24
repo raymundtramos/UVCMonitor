@@ -56,7 +56,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     override fun onStart() {
         super.onStart()
         mUSBMonitor!!.register()
-        if (mCameraHandler!!.isOpened && !mCameraHandler!!.isPreviewing) {
+        if (mCameraHandler!!.isOpened) {
             mCameraHandler!!.startPreview()
         }
     }
@@ -70,7 +70,12 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     override fun onDestroy() {
         mCameraHandler!!.destroy();
-        destroyViewAndMonitor()
+        mCameraView = null
+        mCameraButton = null
+        if (mUSBMonitor != null) {
+            mUSBMonitor!!.destroy()
+            mUSBMonitor = null
+        }
         super.onDestroy()
     }
 
@@ -84,15 +89,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
 
     private fun toastUser(msg: String) {
         Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
-    }
-
-    private fun destroyViewAndMonitor() {
-        mCameraView = null
-        mCameraButton = null
-        if (mUSBMonitor != null) {
-            mUSBMonitor!!.destroy()
-            mUSBMonitor = null
-        }
     }
 
     private val mIFrameCallback: IFrameCallback = object : IFrameCallback {
@@ -131,7 +127,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             ) {
                 runOnUiThread(Runnable {
                     mCameraHandler!!.open(this@MainActivity, ctrlBlock)
-                    mCameraHandler!!.startPreview()
                 })
             }
 

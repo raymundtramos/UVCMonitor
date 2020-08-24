@@ -17,7 +17,7 @@ class CameraTextureView: TextureView {
     constructor(context:Context): this(context, null, 0){
     }
 
-    public fun setAspectRatio(aspectRatio:Double){
+    fun setAspectRatio(aspectRatio:Double){
         if(aspectRatio < 0){
             throw IllegalArgumentException()
         }
@@ -27,7 +27,7 @@ class CameraTextureView: TextureView {
         }
     }
 
-    public fun setAspectRatio(width: Int, height: Int){
+    fun setAspectRatio(width: Int, height: Int){
         setAspectRatio(width/(height.toDouble()))
     }
 

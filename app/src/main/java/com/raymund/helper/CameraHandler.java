@@ -27,29 +27,7 @@ public class CameraHandler {
 
     public CameraHandler(CameraTextureView view) {
         mCameraView = view;
-        mCameraView.setSurfaceTextureListener(mSurfaceTextureListener);
     }
-
-    private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surfaceTexture, int i, int i1) {
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surfaceTexture, int i, int i1) {
-            startPreview(surfaceTexture);
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surfaceTexture) {
-            stopPreview();
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surfaceTexture) {
-        }
-    };
 
     public boolean isOpened() {
         synchronized (mSync) {

@@ -127,6 +127,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
             ) {
                 runOnUiThread(Runnable {
                     mCameraHandler!!.open(this@MainActivity, ctrlBlock)
+                    mCameraHandler!!.startPreview()
                 })
             }
 

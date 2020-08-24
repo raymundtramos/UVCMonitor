@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId "com.raymund.uvcmonitor"
-        minSdkVersion 19
+        minSdkVersion 18
         targetSdkVersion versionTarget
         versionCode 1
         versionName "1.0"

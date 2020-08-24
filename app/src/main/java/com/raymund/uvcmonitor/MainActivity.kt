@@ -48,7 +48,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         mSettingsButton!!.setOnClickListener(mSettingsOnClickListener)
 
         mCameraView = findViewById(R.id.camera_texture_view)
-        mCameraView!!.surfaceTextureListener = mSurfaceTextureListener
         mUSBMonitor = USBMonitor(this, mOnDeviceConnectListener)
 
         mCameraHandler = CameraHandler(mCameraView)
@@ -57,7 +56,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
     override fun onStart() {
         super.onStart()
         mUSBMonitor!!.register()
-        if (mCameraHandler!!.isOpened) {
+        if (mCameraHandler!!.isOpened && !mCameraHandler!!.isPreviewing) {
             mCameraHandler!!.startPreview()
         }
     }
@@ -104,30 +103,6 @@ class MainActivity : BaseActivity(), CameraDialogParent {
         }
     }
 
-    private val mSurfaceTextureListener: TextureView.SurfaceTextureListener =
-        object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(
-                surface: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-            }
-
-            override fun onSurfaceTextureSizeChanged(
-                surface: SurfaceTexture,
-                width: Int,
-                height: Int
-            ) {
-            }
-
-            override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
-            }
-
-            override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                return true
-            }
-        }
-
     private val mDeviceOnClickListener: View.OnClickListener = View.OnClickListener {
         CameraDialog.showDialog(this@MainActivity)
     }
@@ -155,8 +130,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 createNew: Boolean
             ) {
                 runOnUiThread(Runnable {
-                    mCameraHandler!!.open(ctrlBlock);
-                    mCameraHandler!!.applyPreferences(this@MainActivity)
+                    mCameraHandler!!.open(this@MainActivity, ctrlBlock)
                     mCameraHandler!!.startPreview()
                 })
             }

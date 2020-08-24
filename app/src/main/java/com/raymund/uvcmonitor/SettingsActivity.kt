@@ -28,11 +28,6 @@ class SettingsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
 
-    override fun onBackPressed() {
-        super.onBackPressed()
-//        this.finish()
-    }
-
     class SettingsFragment() : PreferenceFragmentCompat(), OnPreferenceChangeListener {
         private var mSupportedSizeList: UVCSize? = null
         private var mCameraPreferences: UVCCameraPrefs? = null

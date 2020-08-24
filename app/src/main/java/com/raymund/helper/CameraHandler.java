@@ -14,9 +14,9 @@ import com.serenegiant.usb.UVCSize;
 public class CameraHandler {
     private final Object mSync = new Object();
 
-    private UVCCamera mCamera;
+    private UVCCamera mCamera = null;
     private CameraTextureView mCameraView;
-    private Surface mPreviewSurface;
+    private Surface mPreviewSurface = null;
 
     private boolean mIsPreviewing = false;
 
@@ -36,14 +36,20 @@ public class CameraHandler {
         }
     }
 
-    public void open(USBMonitor.UsbControlBlock ctrlBlock) {
+    public void open(Context context, USBMonitor.UsbControlBlock ctrlBlock) {
         synchronized (mSync) {
             if (isOpened()) {
                 mCamera.destroy();
             }
 
+            // Get the preferences if it exists
+            String id = ctrlBlock.getVenderId() + "-" + ctrlBlock.getProductId();
+
             mCamera = new UVCCamera();
             mCamera.open(ctrlBlock);
+            mCamera.initPreviewSize(getPreferences(context, id));
+
+            mCameraView.setAspectRatio(mCamera.getWidth(), mCamera.getHeight());
         }
     }
 
@@ -69,28 +75,34 @@ public class CameraHandler {
         }
     }
 
+    private UVCCameraPrefs getPreferences(Context context, String id) {
+        SharedPreferences prefs = context.getSharedPreferences(id, Context.MODE_PRIVATE);
+        Gson gson = new Gson();
+        String json = prefs.getString(id, "");
+
+        if (!json.isEmpty()) {
+            return gson.fromJson(json, UVCCameraPrefs.class);
+        } else {
+            return null;
+        }
+    }
+
     public void applyPreferences(Context context) {
         synchronized (mSync) {
             if (isOpened()) {
-                stopPreview();
-
                 String id = getVenProId();
-                SharedPreferences prefs = context.getSharedPreferences(id, Context.MODE_PRIVATE);
-                Gson gson = new Gson();
-                String json = prefs.getString(id, "");
-                UVCCameraPrefs cameraPrefs;
+                UVCCameraPrefs cameraPrefs = getPreferences(context, id);
 
-                if (!json.isEmpty()) {
-                    cameraPrefs = gson.fromJson(json, UVCCameraPrefs.class);
-                    mCamera.setPreviewSize(
-                            cameraPrefs.getWidth(),
-                            cameraPrefs.getHeight(),
-                            cameraPrefs.getFrameFormat(),
-                            cameraPrefs.getFramerate()
-                    );
-                } else {
+                if (cameraPrefs == null) {
                     cameraPrefs = mCamera.getCameraPrefs();
                 }
+
+                mCamera.setPreviewSize(
+                        cameraPrefs.getWidth(),
+                        cameraPrefs.getHeight(),
+                        cameraPrefs.getFrameFormat(),
+                        cameraPrefs.getFramerate()
+                );
 
                 mCameraView.setAspectRatio(cameraPrefs.getWidth(), cameraPrefs.getHeight());
             }

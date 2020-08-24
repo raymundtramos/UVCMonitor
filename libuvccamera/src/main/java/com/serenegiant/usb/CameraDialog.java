@@ -33,6 +33,7 @@ import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.hardware.usb.UsbDevice;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -231,12 +232,20 @@ public class CameraDialog extends DialogFragment {
 			}
 			if (convertView instanceof CheckedTextView) {
 				final UsbDevice device = getItem(position);
-				((CheckedTextView)convertView).setText(
-					String.format("%s (%X: %X: %s)",
-							device.getInterface(0).getName(), // Backwards compatible way to get Product Name
-							device.getVendorId(),
-							device.getProductId(),
-							device.getDeviceName()));
+				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+					((CheckedTextView)convertView).setText(
+						String.format("%s (%X: %X: %s)",
+								device.getInterface(0).getName(), // Backwards compatible way to get Product Name
+								device.getVendorId(),
+								device.getProductId(),
+								device.getDeviceName()));
+				} else {
+					((CheckedTextView)convertView).setText(
+							String.format("%X: %X: %s",
+									device.getVendorId(),
+									device.getProductId(),
+									device.getDeviceName()));
+				}
 			}
 			return convertView;
 		}

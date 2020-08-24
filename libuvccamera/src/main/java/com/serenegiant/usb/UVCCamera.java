@@ -183,15 +183,15 @@ public class UVCCamera {
      * @param ctrlBlock
      */
     public synchronized void open(final UsbControlBlock ctrlBlock) {
-    	int result;
-    	try {
+		int result;
+		try {
 			mCtrlBlock = ctrlBlock.clone();
 			result = nativeConnect(mNativePtr,
-				mCtrlBlock.getVenderId(), mCtrlBlock.getProductId(),
-				mCtrlBlock.getFileDescriptor(),
-				mCtrlBlock.getBusNum(),
-				mCtrlBlock.getDevNum(),
-				getUSBFSName(mCtrlBlock));
+					mCtrlBlock.getVenderId(), mCtrlBlock.getProductId(),
+					mCtrlBlock.getFileDescriptor(),
+					mCtrlBlock.getBusNum(),
+					mCtrlBlock.getDevNum(),
+					getUSBFSName(mCtrlBlock));
 		} catch (final Exception e) {
 			Log.w(TAG, e);
 			result = -1;
@@ -199,22 +199,40 @@ public class UVCCamera {
 		if (result != 0) {
 			throw new UnsupportedOperationException("open failed:result=" + result);
 		}
-    	if (mNativePtr != 0 && TextUtils.isEmpty(mSupportedSize)) {
-    		mSupportedSize = nativeGetSupportedSize(mNativePtr);
-    		mCurrentSizeList = new UVCSize(mSupportedSize);
-    	}
+		if (mNativePtr != 0 && TextUtils.isEmpty(mSupportedSize)) {
+			mSupportedSize = nativeGetSupportedSize(mNativePtr);
+			mCurrentSizeList = new UVCSize(mSupportedSize);
+		}
+	}
 
-		UVCSize.Format format = mCurrentSizeList.getFormat(0);
-    	UVCSize.Frame frame = format.getFrame(format.getDefaultFrameIndex());
-		nativeSetPreviewSize(
-				mNativePtr,
-				frame.getWidth(),
-				frame.getHeight(),
-				frame.getDefaultFrameInterval(),
-				frame.getDefaultFrameInterval(),
-				format.getFrameFormat(),
-				DEFAULT_BANDWIDTH);
+    public synchronized void initPreviewSize(final UVCCameraPrefs prefs) {
+    	if (prefs == null) {
+			UVCSize.Format format = mCurrentSizeList.getFormat(0);
+			UVCSize.Frame frame = format.getFrame(format.getDefaultFrameIndex());
+
+			setPreviewSize(
+					frame.getWidth(),
+					frame.getHeight(),
+					format.getFrameFormat(),
+					frame.getDefaultFrameInterval()
+			);
+		} else {
+			setPreviewSize(
+					prefs.getWidth(),
+					prefs.getHeight(),
+					prefs.getFrameFormat(),
+					prefs.getFramerate()
+			);
+		}
     }
+
+    public synchronized int getWidth() {
+		return mCurrentWidth;
+	}
+
+	public synchronized int getHeight() {
+    	return mCurrentHeight;
+	}
 
 	/**
 	 * set status callback
@@ -334,7 +352,7 @@ public class UVCCamera {
 	}
 
 	public void setPreviewSize(final int width, final int height, final int frameFormat, final int fps) {
-		setPreviewSize(width, height, mCurrentMinFps, fps, frameFormat, mCurrentBandwidthFactor);
+		setPreviewSize(width, height, fps, fps, frameFormat, DEFAULT_BANDWIDTH);
 	}
 
 	/**
@@ -346,19 +364,26 @@ public class UVCCamera {
 	 * @param frameFormat either FRAME_FORMAT_YUYV(0) or FRAME_FORMAT_MJPEG(1)
 	 * @param bandwidthFactor
 	 */
-	public void setPreviewSize(final int width, final int height, final int min_fps, final int max_fps, final int frameFormat, final float bandwidthFactor) {
+	public synchronized void setPreviewSize(final int width, final int height, final int min_fps, final int max_fps, final int frameFormat, final float bandwidthFactor) {
 		if ((width == 0) || (height == 0))
 			throw new IllegalArgumentException("invalid preview size");
 		if (mNativePtr != 0) {
 			final int result = nativeSetPreviewSize(mNativePtr, width, height, min_fps, max_fps, frameFormat, bandwidthFactor);
 			if (result != 0)
-				throw new IllegalArgumentException("Failed to set preview size");
+				throw new IllegalArgumentException("Failed to set preview size" + result);
 			mCurrentFrameFormat = frameFormat;
 			mCurrentWidth = width;
 			mCurrentHeight = height;
 			mCurrentMinFps = min_fps;
 			mCurrentMaxFps = max_fps;
 			mCurrentBandwidthFactor = bandwidthFactor;
+
+			Log.i("RAYMUNDTEST_PREFS", "mCurrentWidth = " + mCurrentWidth );
+			Log.i("RAYMUNDTEST_PREFS", "mCurrentHeight = " + mCurrentHeight );
+			Log.i("RAYMUNDTEST_PREFS", "mCurrentMinFps  = " + mCurrentMinFps );
+			Log.i("RAYMUNDTEST_PREFS", "mCurrentMaxFps  = " + mCurrentMaxFps );
+			Log.i("RAYMUNDTEST_PREFS", "mCurrentFrameFormat  = " + mCurrentFrameFormat );
+			Log.i("RAYMUNDTEST_PREFS", "mCurrentBandwidthFactor = " + mCurrentBandwidthFactor );
 		}
 	}
 

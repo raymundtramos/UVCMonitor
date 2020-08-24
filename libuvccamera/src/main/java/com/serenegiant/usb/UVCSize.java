@@ -355,21 +355,28 @@ public class UVCSize implements Parcelable {
         }
     };
 
+    private boolean isSupportedSubType(int type) {
+        return (type == FORMAT_DESC_TYPE_UNCOMPRESSED || type == FORMAT_DESC_TYPE_MJPEG);
+    }
+
     private ArrayList<Format> parseFormat(JSONArray formats) {
         ArrayList<Format> result = new ArrayList<Format>();
 
         try {
             for (int i = 0; i < formats.length(); i++) {
                 JSONObject jsonFormat = formats.getJSONObject(i);
-                JSONArray jsonFrames = jsonFormat.getJSONArray("frame_descs");
-                Format format = new Format(
-                        jsonFormat.getInt("bDescriptorSubtype"),
-                        jsonFormat.getInt("bFormatIndex"),
-                        jsonFormat.getInt("bDefaultFrameIndex")
-                );
-                format.frameDescs = new ArrayList<Frame>(parseFrame(jsonFrames));
-                Collections.sort(format.frameDescs);
-                result.add(format);
+
+                if (isSupportedSubType(jsonFormat.getInt("bDescriptorSubtype"))) {
+                    JSONArray jsonFrames = jsonFormat.getJSONArray("frame_descs");
+                    Format format = new Format(
+                            jsonFormat.getInt("bDescriptorSubtype"),
+                            jsonFormat.getInt("bFormatIndex"),
+                            jsonFormat.getInt("bDefaultFrameIndex")
+                    );
+                    format.frameDescs = new ArrayList<Frame>(parseFrame(jsonFrames));
+                    Collections.sort(format.frameDescs);
+                    result.add(format);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

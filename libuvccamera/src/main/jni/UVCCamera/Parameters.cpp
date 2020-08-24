@@ -363,48 +363,41 @@ char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle) {
 				{
 					writer.StartObject();
 					{
-						switch (fmt_desc->bDescriptorSubtype) {
-						case UVC_VS_FORMAT_UNCOMPRESSED:
-						case UVC_VS_FORMAT_MJPEG:
-							write(writer, "bDescriptorSubtype", fmt_desc->bDescriptorSubtype);
-							write(writer, "bFormatIndex", fmt_desc->bFormatIndex);
-							write(writer, "bDefaultFrameIndex", fmt_desc->bDefaultFrameIndex);
-							writer.String("frame_descs");
-							writer.StartArray();
-							DL_FOREACH(fmt_desc->frame_descs, frame_desc)
-							{
-							    uint8_t intervalType = frame_desc->bFrameIntervalType;
+						write(writer, "bDescriptorSubtype", fmt_desc->bDescriptorSubtype);
+                        write(writer, "bFormatIndex", fmt_desc->bFormatIndex);
+                        write(writer, "bDefaultFrameIndex", fmt_desc->bDefaultFrameIndex);
+                        writer.String("frame_descs");
+                        writer.StartArray();
+                        DL_FOREACH(fmt_desc->frame_descs, frame_desc)
+                        {
+                            uint8_t intervalType = frame_desc->bFrameIntervalType;
 
-							    writer.StartObject();
-							    write(writer, "bDescriptorSubtype", frame_desc->bDescriptorSubtype);
-                                write(writer, "wWidth", frame_desc->wWidth);
-                                write(writer, "wHeight", frame_desc->wHeight);
-                                write(writer, "dwDefaultFrameInterval", CONVERT_TO_FPS(frame_desc->dwDefaultFrameInterval));
-                                write(writer, "bFrameIntervalType", intervalType);
+                            writer.StartObject();
+                            write(writer, "bDescriptorSubtype", frame_desc->bDescriptorSubtype);
+                            write(writer, "wWidth", frame_desc->wWidth);
+                            write(writer, "wHeight", frame_desc->wHeight);
+                            write(writer, "dwDefaultFrameInterval", CONVERT_TO_FPS(frame_desc->dwDefaultFrameInterval));
+                            write(writer, "bFrameIntervalType", intervalType);
 
-                                if (intervalType)
+                            if (intervalType)
+                            {
+                                writer.String("intervals");
+                                writer.StartArray();
+                                for (uint8_t i = 0; i < intervalType; i++)
                                 {
-                                    writer.String("intervals");
-                                    writer.StartArray();
-                                    for (uint8_t i = 0; i < intervalType; i++)
-                                    {
-                                        writer.Uint(CONVERT_TO_FPS(frame_desc->intervals[i]));
-                                    }
-                                    writer.EndArray();
-                                } else
-                                {
-                                    write(writer, "dwMinFrameInterval", frame_desc->dwMinFrameInterval);
-                                    write(writer, "dwMaxFrameInterval", frame_desc->dwMaxFrameInterval);
-                                    write(writer, "dwFrameIntervalStep", frame_desc->dwFrameIntervalStep);
+                                    writer.Uint(CONVERT_TO_FPS(frame_desc->intervals[i]));
                                 }
+                                writer.EndArray();
+                            } else
+                            {
+                                write(writer, "dwMinFrameInterval", frame_desc->dwMinFrameInterval);
+                                write(writer, "dwMaxFrameInterval", frame_desc->dwMaxFrameInterval);
+                                write(writer, "dwFrameIntervalStep", frame_desc->dwFrameIntervalStep);
+                            }
 
-							    writer.EndObject();
-							}
-							writer.EndArray();
-							break;
-						default:
-							break;
-						}
+                            writer.EndObject();
+                        }
+                        writer.EndArray();
 					}
 					writer.EndObject();
 				}

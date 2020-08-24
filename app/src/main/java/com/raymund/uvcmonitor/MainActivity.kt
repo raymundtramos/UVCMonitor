@@ -139,7 +139,7 @@ class MainActivity : BaseActivity(), CameraDialogParent {
                 device: UsbDevice,
                 ctrlBlock: UsbControlBlock
             ) {
-                mCameraHandler!!.close();
+                mCameraHandler!!.destroy();
             }
 
             override fun onDettach(device: UsbDevice) {

@@ -4,18 +4,16 @@
     <PreferenceCategory app:title="@string/header_preview">
         <ListPreference
             app:key="@string/pref_preview_frame_format_key"
-            app:title="@string/pref_preview_frame_format_title"
-            app:summary="%s"/>
+            app:summary="%s"
+            app:title="@string/pref_preview_frame_format_title" />
         <ListPreference
             app:key="@string/pref_preview_resolution_key"
-            app:title="@string/pref_preview_resolution_title"
-            app:summary="%s"/>
+            app:summary="%s"
+            app:title="@string/pref_preview_resolution_title" />
         <ListPreference
             app:key="@string/pref_preview_framerate_key"
-            app:title="@string/pref_preview_framerate_title"
-            app:summary="%s"/>
+            app:summary="%s"
+            app:title="@string/pref_preview_framerate_title" />
     </PreferenceCategory>
 
-    <PreferenceCategory app:title="@string/header_record">
-    </PreferenceCategory>
 </PreferenceScreen>

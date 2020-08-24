@@ -4,8 +4,6 @@
 
     <!-- Preference Titles -->
     <string name="header_preview">Preview Settings</string>
-    <string name="header_record">Record Settings</string>
-    <!-- Preference Titles -->
     <string name="pref_preview_frame_format_key">preview_frame_format</string>
     <string name="pref_preview_frame_format_title">Frame Format</string>
     <string name="pref_preview_resolution_key">preview_resolution</string>

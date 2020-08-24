@@ -32,7 +32,7 @@
             android:layout_toEndOf="@id/camera_button"
             android:contentDescription="Settings"
             android:scaleType="centerCrop"
-            android:src="@android:drawable/ic_menu_more" />
+            android:src="@android:drawable/ic_menu_preferences" />
     </RelativeLayout>
 
 </FrameLayout>

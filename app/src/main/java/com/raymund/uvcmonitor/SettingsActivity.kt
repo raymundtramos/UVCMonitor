@@ -19,13 +19,18 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
-        val supportedSizeList = intent.getParcelableExtra("SupportedSizeList") as UVCSize
-        val cameraPreferences = intent.getParcelableExtra("CameraPreferences") as UVCCameraPrefs
+        val supportedSizeList = intent.getParcelableExtra<UVCSize>("SupportedSizeList")
+        val cameraPreferences = intent.getParcelableExtra<UVCCameraPrefs>("CameraPreferences")
         supportFragmentManager
             .beginTransaction()
-            .replace(R.id.settings, SettingsFragment(supportedSizeList, cameraPreferences))
+            .replace(R.id.settings, SettingsFragment(supportedSizeList!!, cameraPreferences!!))
             .commit()
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+//        this.finish()
     }
 
     class SettingsFragment() : PreferenceFragmentCompat(), OnPreferenceChangeListener {

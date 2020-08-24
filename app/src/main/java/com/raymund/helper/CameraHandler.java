@@ -3,11 +3,7 @@ package com.raymund.helper;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.SurfaceTexture;
-import android.util.Log;
 import android.view.Surface;
-import android.view.TextureView;
-
-import androidx.annotation.NonNull;
 
 import com.google.gson.Gson;
 import com.raymund.widget.CameraTextureView;
